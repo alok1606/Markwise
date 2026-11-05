@@ -308,3 +308,18 @@ Skipped tests (need a controlled test-account fixture file): 8 live database-aut
 Unverified: one-hour session persistence; skipped live DB tests (equivalent protections were checked live earlier as Admin).
 
 Decision: PENDING. Phase 2 not started; awaiting owner approval.
+
+## Owner decision (2026-11-05 11:27 UTC)
+| Check | Status |
+|---|---|
+| Signup confirmation email delivery and verification | PASSED |
+| Password-reset email delivery, reset completion, new-password login | PASSED |
+| Four-role login and role-specific dashboards/navigation | PASSED |
+| Admin-only /users access | PASSED |
+| One-hour session persistence | PENDING / DEFERRED — NOT PASSED (deferred by owner to a later stage) |
+| Full live cross-workspace isolation testing | INCOMPLETE — only verified live from the Admin account; not exercised live as each non-Admin role |
+| Automated tests | 28 passed, 0 failed, 11 skipped |
+
+Skipped automated tests (require a controlled test-account fixture file): 8 live database-authorization tests (including cross-workspace denial), 3 live profile-validation tests.
+
+Not every Phase 1 acceptance criterion has passed. Phase 1 status: accepted by owner with deferred items (session persistence, full live cross-workspace isolation, skipped live tests). Project is ready for Phase 2, which will not begin until the owner explicitly approves.

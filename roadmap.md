@@ -13,3 +13,11 @@
 - [x] Remove Lovable sign-in from login/signup as requested; retain Google, email/password, verification and recovery without backend changes.
 - [x] Run post-change authentication checks: Google request from login/signup, invalid email-login handling, live recovery request, real administrator readback/logout, mobile layout and 15 local tests passed. Fresh successful Google/password login and mailbox redemption require owner interaction; not claimed as retested.
 - [x] Reproduce and resolve recoverable protected-redirect page-loading warning; all five signed-out workspace redirects verified without errors.- [x] Workspace switcher: remember last workspace, show role, prefer invited workspace
+
+## Deferred Phase 1 items
+- [ ] One-hour session persistence with page refresh (deferred by owner)
+- [ ] Full live cross-workspace isolation as each non-Admin role
+- [ ] Run 11 skipped live tests with a controlled fixture file
+
+## Phase 2
+- [ ] Waiting for explicit owner approval before starting
