@@ -59,3 +59,33 @@ INCOMPLETE — enforced by workspace-scoped policies but not exercised live.
 
 ### Decision
 Phase 2: PENDING. Remaining: live backend denial for non-admin roles, live cross-workspace isolation. Phase 3 not started.
+
+## Update 2026-11-05 12:06 UTC — live backend security verification
+
+### Test setup
+Five temporary, email-confirmed test accounts with random passwords were created for this run only: Admin A, Manager, Reviewer and Creator (all members of test workspace A), and Admin B (sole Admin of test workspace B). Each workspace was seeded by its own Admin with rules, facts, glossary entries, a private guideline file and a private logo. Credentials lived only in a private temporary file (owner-read-only), never printed or committed. After testing, all five accounts, both workspaces, their records, audit rows and files were deleted (verified: 0 left). No real accounts, roles or policies were changed.
+
+### Database RLS and storage (automated, real signed-in sessions) — PASSED
+`src/test/knowledge-rls-live.test.ts`: 59 passed, 0 failed.
+- Admin: reads, updates (history written) and downloads/signs files in own workspace.
+- Manager, Reviewer, Creator (each): read 0 rows from all 10 knowledge tables; inserts rejected; updates and deletes by known ID affect 0 rows (record confirmed unchanged); cannot download, sign, upload or delete private guideline/asset files; demo load/remove rejected.
+- Cross-workspace (Admin A vs B and B vs A): 0 rows read even by known ID; insert/update/delete rejected or no effect; cannot move own record into the other workspace; cannot download, sign, upload or delete the other workspace's files; demo functions rejected.
+
+### Server authorization (real requests to the running app server) — PASSED
+Markwise has no Edge Functions; the Knowledge Base uses authenticated server functions. Each role was signed in in a browser and called them directly.
+| Operation | Admin A / Admin B (own) | Manager | Reviewer | Creator |
+|---|---|---|---|---|
+| Read knowledge base | Allowed | Denied | Denied | Denied |
+| Create / update rule | Allowed | Denied | Denied | Denied |
+| Version history | Allowed | Denied | Denied | Denied |
+| Download guideline | Allowed | Denied | Denied | Denied |
+| Save brand profile | Allowed | Denied | Denied | Denied |
+| Demo data | Allowed | Denied | Denied | Denied |
+| Delete rule | Allowed | Denied | Denied | Denied |
+Cross-workspace via server: reading the other workspace denied; updating/deleting the other workspace's rule ID and downloading its file ID through own workspace denied ("not found in this workspace"); passing the other workspace ID denied. Note: Admin B's cross-workspace rule update/delete targeted a rule Admin A had already deleted in the same run, so that specific server check is weak; the database tests above cover it directly. Admin B's cross-workspace file check used a file that still existed.
+
+### Full regression run (fixture not set)
+45 passed, 0 failed, 81 skipped. Skipped: 59 new RLS tests, 11 earlier Phase 2 live tests, 11 Phase 1 live tests — all need a controlled test-account file, which is deliberately not stored in the project. The 59 RLS tests were run with a temporary fixture (above). The browser server-function check is a one-off script, not part of the automated suite.
+
+### Decision
+Phase 2: PASS for security verification (server authorization, database RLS, cross-workspace isolation). Still carried over, not passed: Phase 1 one-hour session persistence and the 11 skipped Phase 1 live tests. Phase 3 not started.
