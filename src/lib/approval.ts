@@ -41,14 +41,36 @@ export function blockingFindings<F extends RoutingFinding>(findings: F[], resolv
   return findings.filter(f => (f.severity === 'high' || f.severity === 'critical') && f.outcome !== 'supported' && !resolvedIds.has(f.id));
 }
 
-/** Claim, legal or cannot_verify findings (dismissed or not) force a named reviewer; everything else goes to the manager. */
-export function routeFor(findings: RoutingFinding[]): 'reviewer' | 'manager' {
-  return findings.some(f => f.category === 'claim' || f.category === 'legal' || f.outcome === 'cannot_verify') ? 'reviewer' : 'manager';
+/** Deterministic check outcome for a version: no review = failed; review with limitations = completed_with_warnings. */
+export type CheckOutcome = 'completed' | 'completed_with_warnings' | 'failed';
+export function checkOutcome(review: { status: string } | null | undefined): CheckOutcome {
+  if (!review) return 'failed';
+  return review.status === 'completed' ? 'completed' : 'completed_with_warnings';
 }
 
-export function submitBlockers(i: { status: ContentStatus; aiState: AiState; blocking: number; route: 'reviewer' | 'manager'; reviewerId: string | null }) {
+/** Why a named reviewer is needed. Claim, legal or cannot_verify findings (dismissed or not), or any incomplete check
+ *  (an unchecked area may hide legal, factual, brand or accessibility risk), force a reviewer; otherwise the manager decides. */
+export function routeReasons(findings: RoutingFinding[], outcome: CheckOutcome = 'completed'): string[] {
+  const r: string[] = [];
+  if (findings.some(f => f.category === 'claim' || f.category === 'legal')) r.push('A finding concerns a claim or legal matter');
+  if (findings.some(f => f.outcome === 'cannot_verify')) r.push('A finding needs checking against approved sources');
+  if (outcome === 'completed_with_warnings') r.push('Some automatic checks could not produce a result');
+  return r;
+}
+export function routeFor(findings: RoutingFinding[], outcome: CheckOutcome = 'completed'): 'reviewer' | 'manager' {
+  return routeReasons(findings, outcome).length ? 'reviewer' : 'manager';
+}
+
+const severityRank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+/** Critical → High → Medium → Low; stable within a severity, unknown severities last. */
+export function sortBySeverity<F extends { severity: string }>(findings: F[]): F[] {
+  return findings.map((f, i) => [f, i] as const).sort((a, b) => ((severityRank[a[0].severity] ?? 9) - (severityRank[b[0].severity] ?? 9)) || a[1] - b[1]).map(x => x[0]);
+}
+
+export function submitBlockers(i: { status: ContentStatus; aiState: AiState; blocking: number; route: 'reviewer' | 'manager'; reviewerId: string | null; checkOutcome?: CheckOutcome }) {
   const out: string[] = [];
   if (i.status !== 'checked') out.push('Only checked content can be sent for approval.');
+  if (i.checkOutcome === 'failed') out.push('The automatic checks have not finished for this version; run them again.');
   if (i.aiState === 'pending') out.push('The AI review has not finished for this version.');
   if (i.blocking > 0) out.push(`Resolve ${i.blocking} high or critical finding${i.blocking === 1 ? '' : 's'} first.`);
   if (i.route === 'reviewer' && !i.reviewerId) out.push('Choose a named reviewer.');

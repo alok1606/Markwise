@@ -8,7 +8,7 @@
 | 3 | Content creation and submission (Text/Image/PDF, immutable versions) | COMPLETE |
 | 4 | Deterministic checking engine | COMPLETE |
 | 5 | AI review engine | COMPLETE (2026-11-05 13:54 UTC) |
-| 6 | Review actions and approval workflow | Implemented, pending owner acceptance (see Phase_6_Progress_Report.md) |
+| 6 | Review actions and approval workflow | Implemented with owner review amendments (check outcomes, severity sort, Manager browser test); pending owner acceptance |
 
 ## Latest test evidence (Phase 5)
 - Unit: 20 passed. Live security/integrity/failure: 6 passed.

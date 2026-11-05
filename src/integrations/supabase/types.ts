@@ -95,6 +95,8 @@ export type Database = {
         Row: {
           ai_state_at_routing: string
           assigned_by: string
+          check_limitations: Json
+          check_outcome: string | null
           content_id: string
           created_at: string
           decided_at: string | null
@@ -103,6 +105,7 @@ export type Database = {
           id: string
           reviewer_id: string | null
           route: string
+          route_reasons: Json
           status: string
           version_id: string
           version_number: number
@@ -111,6 +114,8 @@ export type Database = {
         Insert: {
           ai_state_at_routing: string
           assigned_by: string
+          check_limitations?: Json
+          check_outcome?: string | null
           content_id: string
           created_at?: string
           decided_at?: string | null
@@ -119,6 +124,7 @@ export type Database = {
           id?: string
           reviewer_id?: string | null
           route: string
+          route_reasons?: Json
           status?: string
           version_id: string
           version_number: number
@@ -127,6 +133,8 @@ export type Database = {
         Update: {
           ai_state_at_routing?: string
           assigned_by?: string
+          check_limitations?: Json
+          check_outcome?: string | null
           content_id?: string
           created_at?: string
           decided_at?: string | null
@@ -135,6 +143,7 @@ export type Database = {
           id?: string
           reviewer_id?: string | null
           route?: string
+          route_reasons?: Json
           status?: string
           version_id?: string
           version_number?: number

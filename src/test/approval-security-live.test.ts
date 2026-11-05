@@ -18,20 +18,20 @@ describe.skipIf(!fixturePath || !url || !key || !service)('Live Phase 6 approval
   const noAi = { visible_text: null, findings: [] };
 
   /** Creates, submits and deterministically checks text content; optionally records AI (fake) or a failed AI attempt. */
-  async function prepared(text: string, ai: 'completed' | 'failed' | 'none' = 'completed') {
+  async function prepared(text: string, ai: 'completed' | 'failed' | 'none' = 'completed', limitations: string[] = []) {
     const id = (await c['creator']!.rpc('create_content', { _workspace_id: A, _type: 'text', _title: 'P6', _channel: '', _audience: '', _goal: '', _body_text: text, _alt_text: null as never, _text_color: null as never, _background_color: null as never })).data as string;
     expect((await c['creator']!.rpc('submit_content', { _content_id: id, _expected_version: 1 })).error).toBeNull();
-    await check(id);
+    await check(id, limitations);
     if (ai === 'completed') await executeAiReview({ caller: c['creator']!, admin, userId: uid['creator']!, workspaceId: A, contentId: id, callModel: async () => noAi });
     if (ai === 'failed') await logFailedAi(id);
     return id;
   }
-  async function check(id: string) {
+  async function check(id: string, limitations: string[] = []) {
     const row = (await admin.from('contents').select('version,body_text').eq('id', id).single()).data!;
     const vid = (await admin.from('content_versions').select('id').eq('content_id', id).eq('version_number', row.version).single()).data!.id as string;
     const rules = ((await admin.from('rules').select('id,code,title,description,severity,category,active,kind,pattern').eq('id', ruleId)).data ?? []) as BannedRule[];
     const det = runChecks({ type: 'text', body_text: row.body_text, alt_text: null, text_color: null, background_color: null, rules, glossary: [], palette: [], colour_samples: null });
-    const r = await admin.rpc('record_review', { _actor: uid['creator']!, _content_id: id, _content_version_id: vid, _findings: det.findings as never, _dropped: det.dropped, _limitations: [] as never });
+    const r = await admin.rpc('record_review', { _actor: uid['creator']!, _content_id: id, _content_version_id: vid, _findings: det.findings as never, _dropped: det.dropped, _limitations: limitations as never });
     expect(r.error).toBeNull();
   }
   async function logFailedAi(id: string) {
@@ -103,6 +103,33 @@ describe.skipIf(!fixturePath || !url || !key || !service)('Live Phase 6 approval
     expect(all).toEqual([{ status: 'changes_requested', version_number: 1 }, { status: 'open', version_number: 2 }]);
     // The previous reviewer keeps read access to history.
     expect(((await c['reviewer']!.from('approvals').select('id').eq('content_id', id)).data ?? [])).toHaveLength(2);
+  });
+
+  it('checks with warnings: content becomes checked, needs a named reviewer, and the limitation and reason are recorded', async () => {
+    const lim = 'Palette check not run: the image colours could not be read in this browser.';
+    const id = await prepared('Friendly onboarding for every team.', 'completed', [lim]);
+    expect((await status(id)).status).toBe('checked');
+    const facts = (await c['creator']!.rpc('approval_route_facts', { _content_id: id })).data as { check_outcome: string; route: string; limitations: string[] };
+    expect(facts.check_outcome).toBe('completed_with_warnings'); expect(facts.route).toBe('reviewer'); expect(facts.limitations).toEqual([lim]);
+    expect((await send(id, 1, null)).error?.message).toMatch(/reviewer/i);
+    expect((await send(id, 1, uid['reviewer']!)).error).toBeNull();
+    const a = await openApproval(id);
+    expect(a.route).toBe('reviewer'); expect(a.check_outcome).toBe('completed_with_warnings'); expect(a.check_limitations).toEqual([lim]);
+    expect(a.route_reasons).toEqual(['Some automatic checks could not produce a result']);
+    // Recorded routing facts cannot be altered afterwards, even by the service role.
+    expect((await admin.from('approvals').update({ check_limitations: [] }).eq('id', a.id)).error).not.toBeNull();
+    expect((await admin.from('reviews').select('status').eq('content_id', id).eq('source', 'deterministic').single()).data!.status).toBe('partial');
+  });
+
+  it('checks with warnings do not weaken the high/critical gate; failed checks keep sending blocked', async () => {
+    const id = await prepared('Guaranteed results for every team.', 'completed', ['No colours could be read from the image.']);
+    expect((await send(id, 1, uid['reviewer']!)).error?.message).toMatch(/high and critical/i);
+    // Failed checking saves nothing: content stays submitted and cannot be sent until a successful retry.
+    const f = (await c['creator']!.rpc('create_content', { _workspace_id: A, _type: 'text', _title: 'P6', _channel: '', _audience: '', _goal: '', _body_text: 'Calm note.', _alt_text: null as never, _text_color: null as never, _background_color: null as never })).data as string;
+    expect((await c['creator']!.rpc('submit_content', { _content_id: f, _expected_version: 1 })).error).toBeNull();
+    expect(((await c['creator']!.rpc('approval_route_facts', { _content_id: f })).data as { check_outcome: string }).check_outcome).toBe('failed');
+    expect((await send(f, 1, uid['reviewer']!)).error).not.toBeNull();
+    await check(f); expect((await status(f)).status).toBe('checked');
   });
 
   it('rejection is final', async () => {

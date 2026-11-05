@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { decisionError, diffWords, dismissalError, threadComments, type Decision } from '@/lib/approval';
 
 export type ActionRow = { id: string; finding_id: string; action: string; reason: string | null; final_text: string | null; actor_id: string; created_at: string };
-export type ApprovalRow = { id: string; version_number: number; route: string; reviewer_id: string | null; assigned_by: string; ai_state_at_routing: string; status: string; decision_comment: string | null; decided_by: string | null; decided_at: string | null; created_at: string };
+export type ApprovalRow = { check_outcome?: string | null; check_limitations?: unknown; route_reasons?: unknown; id: string; version_number: number; route: string; reviewer_id: string | null; assigned_by: string; ai_state_at_routing: string; status: string; decision_comment: string | null; decided_by: string | null; decided_at: string | null; created_at: string };
 export type CommentRow = { id: string; parent_id: string | null; author_id: string; message: string; created_at: string };
 type F = { id: string; quoted_text: string; suggested_text?: string | null; span_start: number | null };
 
@@ -47,14 +47,17 @@ export function FindingResolution({ f, action, names, canAct, canRewrite, busy, 
   </>;
 }
 
-export type RouteFacts = { version: number; status: string; ai_state: 'completed' | 'failed' | 'pending'; blocking: number; route: 'manager' | 'reviewer' };
+export type RouteFacts = { version: number; status: string; ai_state: 'completed' | 'failed' | 'pending'; blocking: number; route: 'manager' | 'reviewer'; check_outcome?: 'completed' | 'completed_with_warnings' | 'failed'; limitations?: string[]; reasons?: string[] };
 
 export function SendForApproval({ facts, reviewers, busy, onSend }: { facts: RouteFacts; reviewers: { id: string; name: string }[] | undefined; busy: boolean; onSend: (reviewerId: string | null) => void }) {
   const [reviewer, setReviewer] = useState('');
-  const blocked = facts.ai_state === 'pending' || facts.blocking > 0 || (facts.route === 'reviewer' && !reviewer);
+  const blocked = facts.check_outcome === 'failed' || facts.ai_state === 'pending' || facts.blocking > 0 || (facts.route === 'reviewer' && !reviewer);
   return <section className="mt-6 rounded-lg border bg-card p-6" aria-labelledby="send-h">
     <h2 id="send-h" className="flex items-center gap-2 text-lg font-semibold"><RouteIcon className="size-4 text-primary" />Send for approval</h2>
-    <p className="mt-1 text-sm text-muted-foreground">{facts.route === 'reviewer' ? 'This version has claim, legal or “needs checking” findings, so a named reviewer must approve it.' : 'No claim or legal findings: this goes to a manager for approval.'}</p>
+    <p className="mt-1 text-sm text-muted-foreground">{facts.route === 'reviewer' ? 'A named reviewer must approve this version because:' : 'No claim or legal findings and all checks completed: this goes to a manager for approval.'}</p>
+    {facts.route === 'reviewer' && !!facts.reasons?.length && <ul className="mt-1 list-disc pl-5 text-sm">{facts.reasons.map(r => <li key={r}>{r}</li>)}</ul>}
+    {facts.check_outcome === 'completed_with_warnings' && <p role="status" className="mt-3 flex gap-2 rounded-md border border-dashed p-3 text-sm"><ShieldAlert className="size-4 shrink-0 text-primary" />Some automatic checks could not produce a result ({facts.limitations?.length ?? 0}). They are not treated as passed; the reviewer will see which ones.</p>}
+    {facts.check_outcome === 'failed' && <p role="status" className="mt-3 rounded-md border border-destructive/40 p-3 text-sm text-destructive">The automatic checks have not finished for this version. Run them again before sending.</p>}
     {facts.ai_state === 'pending' && <p role="status" className="mt-3 rounded-md border border-dashed p-3 text-sm">The AI review has not finished for this version. Wait for it, or run it again from the AI review section.</p>}
     {facts.ai_state === 'failed' && <p role="status" className="mt-3 flex gap-2 rounded-md border border-destructive/40 p-3 text-sm"><ShieldAlert className="size-4 shrink-0 text-destructive" />AI review failed for this version. You can still send it; routing will use the automatic checks only, and approvers will see this warning.</p>}
     {facts.blocking > 0 && <p role="status" className="mt-3 text-sm text-destructive">Resolve {facts.blocking} high or critical finding{facts.blocking === 1 ? '' : 's'} first (accept, edit or dismiss with a reason).</p>}
@@ -72,6 +75,7 @@ export function DecisionPanel({ approval, busy, onDecide }: { approval: Approval
   return <section className="mt-6 rounded-lg border-2 border-primary/40 bg-card p-6" aria-labelledby="decide-h">
     <h2 id="decide-h" className="text-lg font-semibold">Your decision</h2>
     <p className="mt-1 text-sm text-muted-foreground">Deciding version {approval.version_number}. {route === 'reviewer' ? 'A comment is required.' : 'A comment is required to request changes or reject.'}</p>
+    {approval.check_outcome === 'completed_with_warnings' && <div className="mt-3 rounded-md border border-dashed p-3 text-sm"><p className="flex gap-2 font-medium"><ShieldAlert className="size-4 shrink-0 text-primary" />Some automatic checks could not produce a result. Review these areas yourself:</p><ul className="mt-1 list-disc pl-5">{strs(approval.check_limitations).map(l => <li key={l}>{l}</li>)}</ul></div>}
     {approval.ai_state_at_routing === 'failed' && <p className="mt-3 flex gap-2 rounded-md border border-destructive/40 p-3 text-sm"><ShieldAlert className="size-4 shrink-0 text-destructive" />The AI review failed for this version; it was routed on automatic checks only.</p>}
     <div className="mt-4 space-y-1.5"><Label htmlFor="decision-comment">Comment</Label><Textarea id="decision-comment" value={comment} onChange={e => setComment(e.target.value)} maxLength={4000} /></div>
     {err && <p role="alert" className="mt-2 text-sm text-destructive">{err}</p>}
@@ -79,6 +83,7 @@ export function DecisionPanel({ approval, busy, onDecide }: { approval: Approval
   </section>;
 }
 
+const strs = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 const decisionText: Record<string, string> = { open: 'Awaiting decision', approved: 'Approved', changes_requested: 'Changes requested', rejected: 'Rejected' };
 export function ApprovalHistory({ approvals, names }: { approvals: ApprovalRow[]; names: Record<string, string> }) {
   if (!approvals.length) return null;
@@ -86,7 +91,9 @@ export function ApprovalHistory({ approvals, names }: { approvals: ApprovalRow[]
     <ol className="mt-4 space-y-3">{approvals.map(a => <li key={a.id} className="rounded-md border p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2"><span className="font-medium">Version {a.version_number}</span><Badge variant={a.status === 'approved' ? 'default' : a.status === 'rejected' ? 'destructive' : 'secondary'}>{decisionText[a.status]}</Badge>
         <span className="text-muted-foreground">{a.route === 'reviewer' ? `Reviewer: ${names[a.reviewer_id ?? ''] ?? 'Reviewer'}` : 'Manager route'} · sent {new Date(a.created_at).toLocaleString()}</span>
-        {a.ai_state_at_routing === 'failed' && <Badge variant="outline">AI review failed</Badge>}</div>
+        {a.ai_state_at_routing === 'failed' && <Badge variant="outline">AI review failed</Badge>}{a.check_outcome === 'completed_with_warnings' && <Badge variant="outline">Checks completed with warnings</Badge>}</div>
+      {strs(a.route_reasons).length > 0 && <p className="mt-1 text-xs text-muted-foreground">Routing reason: {strs(a.route_reasons).join('; ')}</p>}
+      {strs(a.check_limitations).length > 0 && <p className="mt-1 text-xs text-muted-foreground">Incomplete checks: {strs(a.check_limitations).join('; ')}</p>}
       {a.decided_at && <p className="mt-1">{names[a.decided_by ?? ''] ?? 'Approver'} · {new Date(a.decided_at).toLocaleString()}{a.decision_comment ? <>: “{a.decision_comment}”</> : ''}</p>}
     </li>)}</ol></section>;
 }

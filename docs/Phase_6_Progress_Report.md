@@ -30,10 +30,33 @@ Approved plan: owner approval 2026-11-05 14:07 UTC, with clarifications (recover
 - Regression (temporary accounts, run sequentially to avoid sign-in rate limits): full suite **155 passed, 0 failed**; Phase 5 live suite **6 passed** (run separately after a sign-in timeout and a leftover test rule from that timed-out run were cleaned); Phase 2 KB RLS **59 passed**; Phase 1 database + Phase 2 KB authorization **19 passed**. Total **239 passed, 0 failed, 3 skipped** (Phase 1 profile tests needing a real signed-in session file — not counted as passed). One Phase 5 assertion expected the word "submitted" in the draft-refusal message; the message was adjusted to keep it ("runs only on submitted or checked content"); no test was edited.
 - Typecheck and preview build passed. All temporary accounts, workspaces, content, approvals, comments, actions and rules deleted; verified 0 left.
 
+## Owner review amendments (2026-11-05, after first report)
+1. **Deterministic check outcomes.** completed = all applicable checks produced a result; completed_with_warnings = checks finished but at least one could not produce a result (stored as review status `partial`, unchanged from Phase 4); failed = the checking process saved nothing for the latest version.
+   - completed_with_warnings now moves content to checked. The panel shows "Completed with warnings", lists each incomplete check and why, and states that an incomplete check is not a pass. All findings and results are kept.
+   - Any incomplete check forces Reviewer routing. All current checks cover legal, factual, brand or accessibility risk (banned terms, terminology, numeric claims, alt text, contrast, palette), so every limitation is treated as material.
+   - Each approval now records `check_outcome`, `check_limitations` and `route_reasons`. These are shown in the decision panel and approval history, included in the audit event, and protected by the immutability trigger.
+   - The high/critical unresolved-finding gate is unchanged and still applies with warnings (live-tested).
+   - failed: content stays at Checking; sending for approval is refused in the database ("automatic checks have not finished"). The supported recovery is the existing owner-only "Run automatic checks" retry (Phase 4, one review per version). Nothing is bypassed.
+   - AI failure handling is unchanged (separate path, Phase 5 behaviour).
+   - Migration `0017_phase6_check_outcomes`: three additive approval columns (with defaults); updated immutability guard, `record_review`, `approval_route_facts` (adds outcome/limitations/reasons) and `submit_for_approval`. Backfill: submitted content whose latest version already had a `partial` review becomes checked (0 rows).
+2. **Severity sorting.** Both findings panels now list findings Critical → High → Medium → Low (stable within a severity). Check type and category stay visible as badges. Automatic and AI findings remain in separate panels, because Phase 5 requires them to stay distinct.
+3. **Manager browser end-to-end (passed).** Content was prepared through the real database functions with a fake "no issues" AI result, because the real AI flags almost any text as a claim. The Creator then sent each item from the browser. Results:
+   - The All Content filter "Awaiting manager" listed the 3 manager-routed items and not the reviewer item.
+   - The Manager approved one item (Approved), requested changes on one with a comment (Changes requested) and permanently rejected one with a comment (Rejected).
+   - On the reviewer-routed item (sent with check warnings), the Manager saw no decision panel. Server refusal is covered by the live tests.
+   - The Creator saw Approved / Changes requested / Rejected / Awaiting reviewer.
+   - The assigned Reviewer saw the incomplete-check list in the decision panel and the routing reason in the history.
+   - No console errors. Database rows confirmed each decision, comment, outcome, limitation and reason.
+4. **Amendment test results.**
+   - Unit: 19 passed (15 earlier plus 4 new: outcome mapping, warnings force reviewer, failed blocks while the gate is unchanged, severity order).
+   - Phase 6 live: 9 passed (7 earlier plus 2 new: warnings route to a reviewer with the limitation/reason recorded and immutable; warnings keep the high/critical gate; failed checks block sending until a successful retry).
+   - Full regression, run sequentially with temporary accounts: 216 passed, 1 failed, 22 skipped. The failure was a 5-second test timeout in the Phase 2 knowledge base RLS suite, which then passed 59/59 on rerun with a longer timeout. 19 of the skipped tests (Phase 1 database and Phase 2 knowledge base authorization) needed an account-list fixture; they then passed 19/19.
+   - **Final: 245 passed, 0 failing after rerun, 3 skipped** (Phase 1 profile tests needing a real session file; not counted as passed).
+   - Typecheck passed. Temporary accounts and data were deleted, with 0 left.
+
 ## Not verified / open
-- Manager-route approval was verified in live tests but not in the browser: the real AI flagged even a neutral note as a "needs checking" claim, so browser items routed to a Reviewer. This is correct behaviour but means most real content will need a Reviewer.
-- Deterministic review with limitations (`partial`) keeps content in submitted with no in-app way forward (Phase 4 allows one review per version). Needs an owner decision (e.g. allow routing with a warning).
+- Manager-route browser test used a fake AI result: the real AI flags most text as a claim, so in practice most content will need a Reviewer.
+- A checking-process failure is not stored as its own record; it is shown as missing results with the retry button.
 - Reviewers see the Creator as "Workspace member" because Phase 1 profile visibility was not widened.
-- Findings lists keep Phase 4/5 ordering (by check, then AI) rather than a single severity sort.
 - AI review latency (10–20 s) applies to every new version from Accept/Edit/resubmit.
 - Phase 1 deferred: one-hour session persistence (PENDING/DEFERRED) and 3 Phase 1 profile tests.

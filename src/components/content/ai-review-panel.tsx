@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2, HelpCircle, Info, Sparkles, XCircle } from
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { overlapsWithDeterministic } from '@/lib/ai-review';
+import { sortBySeverity } from '@/lib/approval';
 
 type Finding = { id: string; review_id: string; source?: string | null; check_name: string; category: string; severity: string; confidence: number; span_start: number | null; span_end: number | null; quoted_text: string; explanation: string; cited_kind: string; cited_code: string; cited_passage: string; outcome: string; suggested_text?: string | null; evidence_kind?: string | null; bbox?: unknown };
 type Review = { id: string; version_number: number; run_at: string; status: string; dropped_findings_count: number; downgraded_findings_count?: number | null; finding_count: number; limitations: unknown; model?: string | null; evidence_text?: string | null };
@@ -37,7 +38,7 @@ export function AiReviewPanel({ review, findings, deterministic, imageUrl, canRu
       {boxes.map(({ f, b }, i) => <span key={f.id} title={f.quoted_text} className="absolute rounded-sm border-2 border-destructive" style={{ left: `${b![0] * 100}%`, top: `${b![1] * 100}%`, width: `${b![2] * 100}%`, height: `${b![3] * 100}%` }}><span className="absolute -top-5 left-0 rounded bg-destructive px-1 text-[10px] text-destructive-foreground">{i + 1}</span></span>)}</div>}
     {review.evidence_text && <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">Text the AI read in the image</summary><p className="mt-2 whitespace-pre-wrap rounded-md border bg-muted p-3">{review.evidence_text}</p></details>}
     {!mine.length && <p className="mt-4 flex items-center gap-2 text-sm"><CheckCircle2 className="size-4 text-primary" />The AI found no issues.</p>}
-    <ul className="mt-4 space-y-2">{mine.map(f => { const v = verdict[f.outcome] ?? verdict['cannot_verify']!; const also = overlaps.get(f.id); const b = box(f.bbox); return <li key={f.id} className="rounded-md border p-3 text-sm">
+    <ul className="mt-4 space-y-2">{sortBySeverity(mine).map(f => { const v = verdict[f.outcome] ?? verdict['cannot_verify']!; const also = overlaps.get(f.id); const b = box(f.bbox); return <li key={f.id} className="rounded-md border p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2"><v.icon className="size-4" /><q className="font-medium">{f.quoted_text}</q>
         <Badge variant={v.variant}>{v.label}</Badge><Badge variant="outline" className="capitalize">{f.severity}</Badge><Badge variant="outline" className="capitalize">{f.category}</Badge>
         <span className="text-xs text-muted-foreground">{f.evidence_kind === 'image_ocr' ? (b ? `image area ${boxes.findIndex(x => x.f.id === f.id) + 1}` : 'image text') : `characters ${f.span_start}–${f.span_end}`} · confidence {Math.round(f.confidence * 100)}%</span></div>

@@ -120,7 +120,6 @@ function ContentDetail() {
           <FindingsPanel review={rv} findings={findings} text={null} canRun={is_owner && status === 'submitted' && !rv} running={running} onRun={() => void runNow()} renderActions={renderActions} />
           <AiReviewPanel review={ai} findings={findings} deterministic={rv ? findings.filter(f => f.review_id === rv.id) : []} imageUrl={type === 'image' ? file_url : null} canRun={is_owner && (status === 'submitted' || status === 'checked') && !ai} running={aiRunning} onRun={() => void runAiNow()} lastError={aiError} renderActions={renderActions} />
         </>}
-        {is_owner && status === 'submitted' && rv && rv.status !== 'completed' && <p role="status" className="mt-6 rounded-md border border-dashed p-3 text-sm">The automatic checks finished with limitations, so this version cannot move to approval yet.</p>}
         {is_owner && status === 'checked' && route_facts && <SendForApproval facts={route_facts} reviewers={reviewers.data as { id: string; name: string }[] | undefined} busy={busy} onSend={r => void send(r)} />}
         {canDecide && openApproval && <DecisionPanel approval={openApproval} busy={busy} onDecide={(d, cm) => void decide(d, cm)} />}
         <ApprovalHistory approvals={approvals as ApprovalRow[]} names={names} />

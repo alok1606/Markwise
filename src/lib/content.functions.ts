@@ -5,7 +5,7 @@ import { runChecks, type BannedRule, type ColourSample, type GlossaryEntry } fro
 import { executeAiReview, AiReviewError } from './ai-review.server';
 import { checkContentFile, contentFieldsSchema, contentPathPattern, contentTypes, fieldsForType, type ContentType } from './content';
 
-export type RouteFacts = { version: number; version_id: string; status: string; ai_state: 'completed' | 'failed' | 'pending'; blocking: number; route: 'manager' | 'reviewer' };
+export type RouteFacts = { version: number; version_id: string; status: string; ai_state: 'completed' | 'failed' | 'pending'; blocking: number; route: 'manager' | 'reviewer'; check_outcome?: 'completed' | 'completed_with_warnings' | 'failed'; limitations?: string[]; reasons?: string[] };
 type Ctx = { supabase: any; userId: string }; // eslint-disable-line @typescript-eslint/no-explicit-any
 const ws = z.object({ workspace_id: z.string().uuid() });
 const idInput = ws.extend({ id: z.string().uuid() });
@@ -61,7 +61,7 @@ export const getContent = createServerFn({ method: 'GET' }).middleware([requireS
   // Phase 6 records, read as the caller under RLS.
   const [actions, approvals, comments, facts] = await Promise.all([
     context.supabase.from('finding_actions').select('id,finding_id,version_id,action,reason,final_text,result_version_id,actor_id,created_at').eq('content_id', c.id).order('created_at'),
-    context.supabase.from('approvals').select('id,version_id,version_number,route,reviewer_id,assigned_by,ai_state_at_routing,status,decision_comment,decided_by,decided_at,created_at').eq('content_id', c.id).order('created_at'),
+    context.supabase.from('approvals').select('id,version_id,version_number,route,reviewer_id,assigned_by,ai_state_at_routing,check_outcome,check_limitations,route_reasons,status,decision_comment,decided_by,decided_at,created_at').eq('content_id', c.id).order('created_at'),
     context.supabase.from('comments').select('id,parent_id,author_id,message,created_at').eq('content_id', c.id).order('created_at'),
     c.status === 'draft' ? Promise.resolve({ data: null, error: null }) : context.supabase.rpc('approval_route_facts', { _content_id: c.id }),
   ]);

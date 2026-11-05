@@ -93,3 +93,25 @@ describe('rewrites', () => {
     expect(d.filter(p => p.kind === 'removed').map(p => p.text).join('')).toBe('guarantee');
   });
 });
+
+import { checkOutcome, routeReasons, sortBySeverity } from '@/lib/approval';
+describe('Phase 6 amendments: check outcomes and severity order', () => {
+  it('maps deterministic review state to completed / completed_with_warnings / failed', () => {
+    expect(checkOutcome({ status: 'completed' })).toBe('completed');
+    expect(checkOutcome({ status: 'partial' })).toBe('completed_with_warnings');
+    expect(checkOutcome(null)).toBe('failed');
+  });
+  it('incomplete checks force reviewer routing even with no findings', () => {
+    expect(routeFor([], 'completed')).toBe('manager');
+    expect(routeFor([], 'completed_with_warnings')).toBe('reviewer');
+    expect(routeReasons([], 'completed_with_warnings')).toEqual(['Some automatic checks could not produce a result']);
+  });
+  it('failed checks block sending; warnings do not weaken the high/critical gate', () => {
+    expect(submitBlockers({ status: 'checked', aiState: 'completed', blocking: 0, route: 'manager', reviewerId: null, checkOutcome: 'failed' }).length).toBe(1);
+    expect(submitBlockers({ status: 'checked', aiState: 'completed', blocking: 2, route: 'reviewer', reviewerId: 'r', checkOutcome: 'completed_with_warnings' })).toEqual(['Resolve 2 high or critical findings first.']);
+  });
+  it('sorts critical, high, medium, low and keeps order within a severity', () => {
+    const r = sortBySeverity([{ id: 'a', severity: 'low' }, { id: 'b', severity: 'high' }, { id: 'c', severity: 'critical' }, { id: 'd', severity: 'medium' }, { id: 'e', severity: 'high' }]);
+    expect(r.map(x => x.id)).toEqual(['c', 'b', 'e', 'd', 'a']);
+  });
+});
