@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { runChecks, type BannedRule, type ColourSample, type GlossaryEntry } from './checks';
+import { executeAiReview, AiReviewError } from './ai-review.server';
 import { checkContentFile, contentFieldsSchema, contentPathPattern, contentTypes, fieldsForType, type ContentType } from './content';
 
 type Ctx = { supabase: any; userId: string }; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -22,7 +23,7 @@ function fail(error: { message: string } | null) { if (error) throw new Error(er
 async function withCounts<T extends { id: string; version: number }>(ctx: Ctx, rows: T[]) {
   if (!rows.length) return rows.map(r => ({ ...r, finding_count: null as number | null }));
   const r = await ctx.supabase.from('reviews').select('content_id,version_number,finding_count').in('content_id', rows.map(x => x.id));
-  const m = new Map<string, number>(); for (const x of r.data ?? []) m.set(`${x.content_id}:${x.version_number}`, x.finding_count);
+  const m = new Map<string, number>(); for (const x of r.data ?? []) { const k = `${x.content_id}:${x.version_number}`; m.set(k, (m.get(k) ?? 0) + x.finding_count); }
   return rows.map(x => ({ ...x, finding_count: m.get(`${x.id}:${x.version}`) ?? null }));
 }
 const listCols = 'id,title,type,channel,status,version,owner_id,created_at,updated_at,submitted_at';
@@ -52,9 +53,9 @@ export const getContent = createServerFn({ method: 'GET' }).middleware([requireS
   let file_url: string | null = null;
   if (c.file_path) { const s = await context.supabase.storage.from('content-files').createSignedUrl(c.file_path, 600); file_url = s.data?.signedUrl ?? null; }
   const owner = await context.supabase.from('profiles').select('full_name,email').eq('id', c.owner_id).maybeSingle();
-  const reviews = await context.supabase.from('reviews').select('id,content_version_id,version_number,run_at,status,dropped_findings_count,finding_count,limitations').eq('content_id', c.id).order('version_number', { ascending: false });
+  const reviews = await context.supabase.from('reviews').select('id,content_version_id,version_number,run_at,status,dropped_findings_count,downgraded_findings_count,finding_count,limitations,source,model,prompt_version,evidence_text,file_sha256').eq('content_id', c.id).order('version_number', { ascending: false });
   fail(reviews.error);
-  const findings = reviews.data?.length ? await context.supabase.from('findings').select('id,review_id,check_name,category,severity,confidence,span_start,span_end,quoted_text,explanation,cited_kind,cited_code,cited_passage,outcome').eq('content_id', c.id).order('span_start', { ascending: true, nullsFirst: true }) : { data: [], error: null };
+  const findings = reviews.data?.length ? await context.supabase.from('findings').select('id,review_id,source,check_name,category,severity,confidence,span_start,span_end,quoted_text,explanation,cited_kind,cited_code,cited_passage,outcome,suggested_text,evidence_kind,bbox').eq('content_id', c.id).order('span_start', { ascending: true, nullsFirst: true }) : { data: [], error: null };
   fail(findings.error);
   return { content: c, versions: versions.data ?? [], reviews: reviews.data ?? [], findings: findings.data ?? [], file_url, owner_name: owner.data?.full_name || owner.data?.email || 'Workspace member', is_owner: c.owner_id === context.userId && role === 'creator' };
 });
@@ -95,7 +96,7 @@ async function executeChecks(ctx: Ctx, workspaceId: string, contentId: string, s
   if (row.data.status !== 'submitted') throw new Error('Checks run only on submitted content');
   const ver = await ctx.supabase.from('content_versions').select('id,version_number,body_text,alt_text,text_color,background_color').eq('content_id', contentId).eq('version_number', row.data.version).maybeSingle();
   if (ver.error || !ver.data) throw new Error('Submitted version not found');
-  const existing = await ctx.supabase.from('reviews').select('id').eq('content_version_id', ver.data.id).maybeSingle();
+  const existing = await ctx.supabase.from('reviews').select('id').eq('content_version_id', ver.data.id).eq('source', 'deterministic').maybeSingle();
   if (existing.data) throw new Error('Checks already ran for this version');
   // Knowledge Base stays Admin-only: read only what the checks need, server-side, never returned to the caller as records.
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
@@ -118,8 +119,25 @@ export const submitContent = createServerFn({ method: 'POST' }).middleware([requ
   await requireRole(context, data.workspace_id, 'creator', 'Only creators can submit content');
   const r = await context.supabase.rpc('submit_content', { _content_id: data.id, _expected_version: data.expected_version }); fail(r.error);
   // Submission stands even if checking fails; nothing partial is saved and the owner can run the checks once.
-  try { return { checks: await executeChecks(context, data.workspace_id, data.id, data.colour_samples, data.image_error), check_error: null }; }
-  catch (e) { return { checks: null, check_error: e instanceof Error ? e.message : 'Automatic checks failed' }; }
+  let checks = null; let check_error: string | null = null;
+  try { checks = await executeChecks(context, data.workspace_id, data.id, data.colour_samples, data.image_error); }
+  catch (e) { check_error = e instanceof Error ? e.message : 'Automatic checks failed'; }
+  // The AI review runs separately: its failure never undoes the submission or the deterministic findings.
+  let ai = null; let ai_error: string | null = null;
+  try { ai = await aiReview(context, data.workspace_id, data.id); } catch (e) { ai_error = e instanceof Error ? e.message : 'AI review failed'; }
+  return { checks, check_error, ai, ai_error };
+});
+
+async function aiReview(ctx: Ctx, workspaceId: string, contentId: string) {
+  const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+  return executeAiReview({ caller: ctx.supabase, admin: supabaseAdmin as never, userId: ctx.userId, workspaceId, contentId });
+}
+
+/** Owner-only retry: allowed only while no AI review exists for the submitted version (a failed attempt saves nothing). */
+export const runAiReview = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(idInput).handler(async ({ data, context }) => {
+  await requireRole(context, data.workspace_id, 'creator', 'Only the content owner can run the AI review');
+  try { return { ai: await aiReview(context, data.workspace_id, data.id), ai_error: null }; }
+  catch (e) { if (e instanceof AiReviewError) return { ai: null, ai_error: e.message }; throw e; }
 });
 
 export const runContentChecks = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(idInput.extend(imageSample)).handler(async ({ data, context }) => {

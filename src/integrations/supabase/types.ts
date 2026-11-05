@@ -14,6 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_calls: {
+        Row: {
+          content_id: string
+          content_version_id: string
+          created_at: string
+          error_kind: string | null
+          id: string
+          model: string
+          prompt_version: string
+          provider: string
+          requested_by: string
+          review_id: string | null
+          status: string
+          what_was_sent_summary: string
+          workspace_id: string
+        }
+        Insert: {
+          content_id: string
+          content_version_id: string
+          created_at?: string
+          error_kind?: string | null
+          id?: string
+          model: string
+          prompt_version: string
+          provider: string
+          requested_by: string
+          review_id?: string | null
+          status: string
+          what_was_sent_summary: string
+          workspace_id: string
+        }
+        Update: {
+          content_id?: string
+          content_version_id?: string
+          created_at?: string
+          error_kind?: string | null
+          id?: string
+          model?: string
+          prompt_version?: string
+          provider?: string
+          requested_by?: string
+          review_id?: string | null
+          status?: string
+          what_was_sent_summary?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_calls_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_calls_content_version_id_fkey"
+            columns: ["content_version_id"]
+            isOneToOne: false
+            referencedRelation: "content_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_calls_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_calls_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -521,6 +598,7 @@ export type Database = {
       }
       findings: {
         Row: {
+          bbox: Json | null
           category: string
           check_name: string
           cited_code: string
@@ -532,6 +610,7 @@ export type Database = {
           created_at: string
           decided_by: string | null
           dismissal_reason: string | null
+          evidence_kind: string
           explanation: string
           final_text: string | null
           id: string
@@ -546,6 +625,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          bbox?: Json | null
           category: string
           check_name: string
           cited_code?: string
@@ -557,6 +637,7 @@ export type Database = {
           created_at?: string
           decided_by?: string | null
           dismissal_reason?: string | null
+          evidence_kind?: string
           explanation: string
           final_text?: string | null
           id?: string
@@ -571,6 +652,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          bbox?: Json | null
           category?: string
           check_name?: string
           cited_code?: string
@@ -582,6 +664,7 @@ export type Database = {
           created_at?: string
           decided_by?: string | null
           dismissal_reason?: string | null
+          evidence_kind?: string
           explanation?: string
           final_text?: string | null
           id?: string
@@ -739,12 +822,18 @@ export type Database = {
           content_id: string
           content_version_id: string
           created_at: string
+          downgraded_findings_count: number
           dropped_findings_count: number
+          evidence_text: string | null
+          file_sha256: string | null
           finding_count: number
           id: string
           limitations: Json
+          model: string | null
+          prompt_version: string | null
           run_at: string
           run_by: string
+          source: string
           status: string
           version_number: number
           workspace_id: string
@@ -753,12 +842,18 @@ export type Database = {
           content_id: string
           content_version_id: string
           created_at?: string
+          downgraded_findings_count?: number
           dropped_findings_count?: number
+          evidence_text?: string | null
+          file_sha256?: string | null
           finding_count?: number
           id?: string
           limitations?: Json
+          model?: string | null
+          prompt_version?: string | null
           run_at?: string
           run_by: string
+          source?: string
           status: string
           version_number: number
           workspace_id: string
@@ -767,12 +862,18 @@ export type Database = {
           content_id?: string
           content_version_id?: string
           created_at?: string
+          downgraded_findings_count?: number
           dropped_findings_count?: number
+          evidence_text?: string | null
+          file_sha256?: string | null
           finding_count?: number
           id?: string
           limitations?: Json
+          model?: string | null
+          prompt_version?: string | null
           run_at?: string
           run_by?: string
+          source?: string
           status?: string
           version_number?: number
           workspace_id?: string
@@ -788,7 +889,7 @@ export type Database = {
           {
             foreignKeyName: "reviews_content_version_id_fkey"
             columns: ["content_version_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "content_versions"
             referencedColumns: ["id"]
           },
@@ -1104,6 +1205,23 @@ export type Database = {
       purge_workspace_content: {
         Args: { _workspace_id: string }
         Returns: undefined
+      }
+      record_ai_review: {
+        Args: {
+          _actor: string
+          _content_id: string
+          _content_version_id: string
+          _downgraded: number
+          _dropped: number
+          _evidence_text: string
+          _file_sha256: string
+          _findings: Json
+          _limitations: Json
+          _model: string
+          _prompt_version: string
+          _sent_summary: string
+        }
+        Returns: string
       }
       record_review: {
         Args: {

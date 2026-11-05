@@ -11,7 +11,8 @@ import { AccessRequired, StatusBadge, TypeIcon } from '@/components/content/cont
 import { ContentEditor } from '@/components/content/content-editor';
 import { canCreateContent, canViewWorkspaceContent, isEditable, type ContentStatus, type ContentType } from '@/lib/content';
 import { contentOptions } from '@/lib/content-queries';
-import { deleteContentDraft, getVersionFileUrl, runContentChecks, submitContent } from '@/lib/content.functions';
+import { deleteContentDraft, getVersionFileUrl, runAiReview, runContentChecks, submitContent } from '@/lib/content.functions';
+import { AiReviewPanel } from '@/components/content/ai-review-panel';
 import { readImageColours } from '@/lib/image-colours';
 import { FindingsPanel } from '@/components/content/findings-panel';
 import { meta } from '@/lib/access';
@@ -22,7 +23,7 @@ function ContentDetail() {
   const { id } = Route.useParams(); const ws = useWorkspace(); const qc = useQueryClient(); const navigate = useNavigate();
   const allowed = canCreateContent(ws.role) || canViewWorkspaceContent(ws.role);
   const q = useQuery({ ...contentOptions(ws.id, id), enabled: !!ws.id && allowed, retry: false });
-  const submit = useServerFn(submitContent); const remove = useServerFn(deleteContentDraft); const versionUrl = useServerFn(getVersionFileUrl); const runChecksFn = useServerFn(runContentChecks); const [running, setRunning] = useState(false);
+  const submit = useServerFn(submitContent); const remove = useServerFn(deleteContentDraft); const versionUrl = useServerFn(getVersionFileUrl); const runChecksFn = useServerFn(runContentChecks); const runAiFn = useServerFn(runAiReview); const [running, setRunning] = useState(false); const [aiRunning, setAiRunning] = useState(false); const [aiError, setAiError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<'submit' | 'delete' | null>(null);
   if (!allowed) return <AccessRequired message="Your role in this workspace has no access to content." />;
   if (q.isPending) return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -36,6 +37,7 @@ function ContentDetail() {
         const img = type === 'image' ? await imageSample() : { colour_samples: null, image_error: null };
         const r = await submit({ data: { workspace_id: ws.id, id, expected_version: c.version, ...img } });
         if (r?.check_error) toast.warning(`Content submitted. Automatic checks did not run: ${r.check_error}`); else toast.success(`Content submitted · ${r?.checks?.findings ?? 0} automatic finding(s)`);
+        if (r?.ai_error) { setAiError(r.ai_error); toast.warning(`AI review did not complete: ${r.ai_error}`); } else if (r?.ai) toast.success(`AI review saved · ${r.ai.findings} suggestion(s)`);
         await refresh();
       }
       if (confirm === 'delete') { await remove({ data: { workspace_id: ws.id, id } }); toast.success('Draft deleted'); await refresh(); await navigate({ to: '/content' }); }
@@ -49,6 +51,11 @@ function ContentDetail() {
     setRunning(true);
     try { const r = await runChecksFn({ data: { workspace_id: ws.id, id, ...(type === 'image' ? await imageSample() : { colour_samples: null, image_error: null }) } }); toast.success(`${r.findings} automatic finding(s) saved`); }
     catch (err) { toast.error(err instanceof Error ? err.message : 'Checks failed'); } finally { setRunning(false); await refresh(); }
+  }
+  async function runAiNow() {
+    setAiRunning(true); setAiError(null);
+    try { const r = await runAiFn({ data: { workspace_id: ws.id, id } }); if (r.ai_error) { setAiError(r.ai_error); toast.error(r.ai_error); } else toast.success(`AI review saved · ${r.ai?.findings ?? 0} suggestion(s)`); }
+    catch (err) { const m = err instanceof Error ? err.message : 'AI review failed'; setAiError(m); toast.error(m); } finally { setAiRunning(false); await refresh(); }
   }
   async function download(versionId: string) {
     try { const { url } = await versionUrl({ data: { workspace_id: ws.id, id, version_id: versionId } }); window.location.assign(url); } catch (err) { toast.error(err instanceof Error ? err.message : 'Download failed'); }
@@ -64,8 +71,9 @@ function ContentDetail() {
       {type !== 'image' && <p className="whitespace-pre-wrap text-sm">{c.body_text || 'No text.'}</p>}
       {is_owner && <p className="text-xs text-muted-foreground">Submitted content is locked and cannot be edited or deleted.</p>}
     </section>}
-    {status !== 'draft' && (() => { const rv = reviews.find(r => r.version_number === c.version) ?? null; const v = versions.find(x => x.version_number === (rv?.version_number ?? c.version));
-      return <FindingsPanel review={rv} findings={findings} text={type === 'image' ? null : v?.body_text ?? null} canRun={is_owner && status === 'submitted' && !rv} running={running} onRun={() => void runNow()} />; })()}
+    {status !== 'draft' && (() => { const rv = reviews.find(r => r.version_number === c.version && r.source === 'deterministic') ?? null; const ai = reviews.find(r => r.version_number === c.version && r.source === 'ai') ?? null; const v = versions.find(x => x.version_number === (rv?.version_number ?? c.version));
+      return <><FindingsPanel review={rv} findings={findings} text={type === 'image' ? null : v?.body_text ?? null} canRun={is_owner && status === 'submitted' && !rv} running={running} onRun={() => void runNow()} />
+        <AiReviewPanel review={ai} findings={findings} deterministic={rv ? findings.filter(f => f.review_id === rv.id) : []} imageUrl={type === 'image' ? file_url : null} canRun={is_owner && status === 'submitted' && !ai} running={aiRunning} onRun={() => void runAiNow()} lastError={aiError} /></>; })()}
     {editable && <div className="mt-6">{type === 'image' && file_url && <img src={file_url} alt={c.alt_text || ''} className="mb-4 max-h-72 rounded-md border" />}
       <ContentEditor key={c.version} workspaceId={ws.id} existing={{ id: c.id, version: c.version, type, file_name: c.file_name, fields: { title: c.title, channel: c.channel, audience: c.audience, goal: c.goal, body_text: c.body_text, alt_text: c.alt_text, text_color: c.text_color, background_color: c.background_color } }} onSaved={() => void refresh()} /></div>}
     <section className="mt-8"><h2 className="text-lg font-semibold">Version history</h2><p className="text-sm text-muted-foreground">Every saved version is kept and cannot be changed.</p>
