@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## Markwise specification reference
+- Preserve `docs/Markwise_Master_Project_Specification.md` as the verbatim user-supplied specification and consult it before phase implementation, so requirements remain available across sessions.
