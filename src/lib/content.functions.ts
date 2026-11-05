@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
+import { runChecks, type BannedRule, type ColourSample, type GlossaryEntry } from './checks';
 import { checkContentFile, contentFieldsSchema, contentPathPattern, contentTypes, fieldsForType, type ContentType } from './content';
 
 type Ctx = { supabase: any; userId: string }; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -17,12 +18,19 @@ async function contentRole(ctx: Ctx, workspaceId: string) {
   throw new Error('You do not have access to content in this workspace');
 }
 function fail(error: { message: string } | null) { if (error) throw new Error(error.message); }
+// Finding count of each item's current-version review (null = not checked), read as the caller under RLS.
+async function withCounts<T extends { id: string; version: number }>(ctx: Ctx, rows: T[]) {
+  if (!rows.length) return rows.map(r => ({ ...r, finding_count: null as number | null }));
+  const r = await ctx.supabase.from('reviews').select('content_id,version_number,finding_count').in('content_id', rows.map(x => x.id));
+  const m = new Map<string, number>(); for (const x of r.data ?? []) m.set(`${x.content_id}:${x.version_number}`, x.finding_count);
+  return rows.map(x => ({ ...x, finding_count: m.get(`${x.id}:${x.version}`) ?? null }));
+}
 const listCols = 'id,title,type,channel,status,version,owner_id,created_at,updated_at,submitted_at';
 
 export const listMyContent = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).inputValidator(ws).handler(async ({ data, context }) => {
   await requireRole(context, data.workspace_id, 'creator', 'Only creators have personal content');
   const r = await context.supabase.from('contents').select(listCols).eq('workspace_id', data.workspace_id).eq('owner_id', context.userId).order('updated_at', { ascending: false });
-  fail(r.error); return r.data ?? [];
+  fail(r.error); return withCounts(context, r.data ?? []);
 });
 
 export const listWorkspaceContent = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).inputValidator(ws).handler(async ({ data, context }) => {
@@ -31,7 +39,7 @@ export const listWorkspaceContent = createServerFn({ method: 'GET' }).middleware
   fail(r.error);
   const ids = [...new Set((r.data ?? []).map(c => c.owner_id))]; const names = new Map<string, string>();
   if (ids.length) { const p = await context.supabase.from('profiles').select('id,full_name,email').in('id', ids); for (const x of p.data ?? []) names.set(x.id, x.full_name || x.email); }
-  return (r.data ?? []).map(c => ({ ...c, owner_name: names.get(c.owner_id) ?? 'Workspace member' }));
+  return withCounts(context, (r.data ?? []).map(c => ({ ...c, owner_name: names.get(c.owner_id) ?? 'Workspace member' })));
 });
 
 export const getContent = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).inputValidator(idInput).handler(async ({ data, context }) => {
@@ -44,7 +52,11 @@ export const getContent = createServerFn({ method: 'GET' }).middleware([requireS
   let file_url: string | null = null;
   if (c.file_path) { const s = await context.supabase.storage.from('content-files').createSignedUrl(c.file_path, 600); file_url = s.data?.signedUrl ?? null; }
   const owner = await context.supabase.from('profiles').select('full_name,email').eq('id', c.owner_id).maybeSingle();
-  return { content: c, versions: versions.data ?? [], file_url, owner_name: owner.data?.full_name || owner.data?.email || 'Workspace member', is_owner: c.owner_id === context.userId && role === 'creator' };
+  const reviews = await context.supabase.from('reviews').select('id,content_version_id,version_number,run_at,status,dropped_findings_count,finding_count,limitations').eq('content_id', c.id).order('version_number', { ascending: false });
+  fail(reviews.error);
+  const findings = reviews.data?.length ? await context.supabase.from('findings').select('id,review_id,check_name,category,severity,confidence,span_start,span_end,quoted_text,explanation,cited_kind,cited_code,cited_passage,outcome').eq('content_id', c.id).order('span_start', { ascending: true, nullsFirst: true }) : { data: [], error: null };
+  fail(findings.error);
+  return { content: c, versions: versions.data ?? [], reviews: reviews.data ?? [], findings: findings.data ?? [], file_url, owner_name: owner.data?.full_name || owner.data?.email || 'Workspace member', is_owner: c.owner_id === context.userId && role === 'creator' };
 });
 
 export const getVersionFileUrl = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(idInput.extend({ version_id: z.string().uuid() })).handler(async ({ data, context }) => {
@@ -73,9 +85,46 @@ export const saveContentDraft = createServerFn({ method: 'POST' }).middleware([r
   fail(r.error); return { version: r.data as number };
 });
 
-export const submitContent = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(idInput.extend({ expected_version: z.number().int().positive() })).handler(async ({ data, context }) => {
+// Browser-read image colours are an untrusted sample: strictly shaped, and only ever used by the palette check.
+const imageSample = { colour_samples: z.array(z.object({ hex: z.string().regex(/^#[0-9A-F]{6}$/), share: z.number().min(0).max(1) })).max(8).nullable().default(null), image_error: z.string().max(200).nullable().default(null) };
+
+async function executeChecks(ctx: Ctx, workspaceId: string, contentId: string, samples: ColourSample[] | null, imageError: string | null) {
+  // Every read here runs as the caller, so RLS confirms ownership before any privileged step.
+  const row = await ctx.supabase.from('contents').select('id,owner_id,status,version,type').eq('id', contentId).eq('workspace_id', workspaceId).maybeSingle();
+  if (row.error || !row.data || row.data.owner_id !== ctx.userId) throw new Error('Content not found in this workspace');
+  if (row.data.status !== 'submitted') throw new Error('Checks run only on submitted content');
+  const ver = await ctx.supabase.from('content_versions').select('id,version_number,body_text,alt_text,text_color,background_color').eq('content_id', contentId).eq('version_number', row.data.version).maybeSingle();
+  if (ver.error || !ver.data) throw new Error('Submitted version not found');
+  const existing = await ctx.supabase.from('reviews').select('id').eq('content_version_id', ver.data.id).maybeSingle();
+  if (existing.data) throw new Error('Checks already ran for this version');
+  // Knowledge Base stays Admin-only: read only what the checks need, server-side, never returned to the caller as records.
+  const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+  const type = row.data.type as ContentType;
+  const [rules, glossary, palette] = await Promise.all([
+    type === 'image' ? { data: [], error: null } : supabaseAdmin.from('rules').select('id,code,title,description,severity,category,active,kind,pattern').eq('workspace_id', workspaceId).eq('active', true).eq('kind', 'banned_term'),
+    type === 'image' ? { data: [], error: null } : supabaseAdmin.from('glossary').select('id,preferred_term,avoided_terms,case_sensitive,note').eq('workspace_id', workspaceId),
+    type === 'image' ? supabaseAdmin.from('palette').select('id,name,hex').eq('workspace_id', workspaceId) : { data: [], error: null },
+  ]);
+  if (rules.error || glossary.error || palette.error) throw new Error('Unable to load workspace guidelines for checking');
+  const v = ver.data;
+  const result = runChecks({ type, body_text: v.body_text, alt_text: v.alt_text, text_color: v.text_color, background_color: v.background_color,
+    rules: (rules.data ?? []) as BannedRule[], glossary: (glossary.data ?? []) as GlossaryEntry[], palette: palette.data ?? [], colour_samples: samples, image_error: imageError });
+  const r = await supabaseAdmin.rpc('record_review', { _actor: ctx.userId, _content_id: contentId, _content_version_id: v.id, _findings: result.findings as never, _dropped: result.dropped, _limitations: result.limitations as never });
+  if (r.error) throw new Error(r.error.message);
+  return { review_id: r.data as string, findings: result.findings.length, limitations: result.limitations };
+}
+
+export const submitContent = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(idInput.extend({ expected_version: z.number().int().positive(), ...imageSample })).handler(async ({ data, context }) => {
   await requireRole(context, data.workspace_id, 'creator', 'Only creators can submit content');
   const r = await context.supabase.rpc('submit_content', { _content_id: data.id, _expected_version: data.expected_version }); fail(r.error);
+  // Submission stands even if checking fails; nothing partial is saved and the owner can run the checks once.
+  try { return { checks: await executeChecks(context, data.workspace_id, data.id, data.colour_samples, data.image_error), check_error: null }; }
+  catch (e) { return { checks: null, check_error: e instanceof Error ? e.message : 'Automatic checks failed' }; }
+});
+
+export const runContentChecks = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(idInput.extend(imageSample)).handler(async ({ data, context }) => {
+  await requireRole(context, data.workspace_id, 'creator', 'Only the content owner can run checks');
+  return executeChecks(context, data.workspace_id, data.id, data.colour_samples, data.image_error);
 });
 
 export const deleteContentDraft = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(idInput).handler(async ({ data, context }) => {

@@ -42,3 +42,8 @@
 ## Phase 4
 - [x] Implementation plan prepared
 - [ ] Owner approval of Phase 4 plan (waiting)
+- [x] Owner approved Phase 4 (2026-11-05 12:50 UTC) with 12 extra requirements
+- [ ] Phase 4: pure checks + unit tests
+- [ ] Phase 4: reviews/findings schema, atomic server run, duplicate prevention
+- [ ] Phase 4: findings UI on content detail + counts
+- [ ] Phase 4: live security tests, end-to-end flow, regression, report

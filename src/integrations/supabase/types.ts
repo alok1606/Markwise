@@ -519,6 +519,106 @@ export type Database = {
           },
         ]
       }
+      findings: {
+        Row: {
+          category: string
+          check_name: string
+          cited_code: string
+          cited_id: string | null
+          cited_kind: string
+          cited_passage: string
+          confidence: number
+          content_id: string
+          created_at: string
+          decided_by: string | null
+          dismissal_reason: string | null
+          explanation: string
+          final_text: string | null
+          id: string
+          outcome: string
+          quoted_text: string
+          review_id: string
+          severity: string
+          source: string
+          span_end: number | null
+          span_start: number | null
+          suggested_text: string | null
+          workspace_id: string
+        }
+        Insert: {
+          category: string
+          check_name: string
+          cited_code?: string
+          cited_id?: string | null
+          cited_kind: string
+          cited_passage?: string
+          confidence: number
+          content_id: string
+          created_at?: string
+          decided_by?: string | null
+          dismissal_reason?: string | null
+          explanation: string
+          final_text?: string | null
+          id?: string
+          outcome: string
+          quoted_text?: string
+          review_id: string
+          severity: string
+          source?: string
+          span_end?: number | null
+          span_start?: number | null
+          suggested_text?: string | null
+          workspace_id: string
+        }
+        Update: {
+          category?: string
+          check_name?: string
+          cited_code?: string
+          cited_id?: string | null
+          cited_kind?: string
+          cited_passage?: string
+          confidence?: number
+          content_id?: string
+          created_at?: string
+          decided_by?: string | null
+          dismissal_reason?: string | null
+          explanation?: string
+          final_text?: string | null
+          id?: string
+          outcome?: string
+          quoted_text?: string
+          review_id?: string
+          severity?: string
+          source?: string
+          span_end?: number | null
+          span_start?: number | null
+          suggested_text?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "findings_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "findings_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "findings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       glossary: {
         Row: {
           avoided_terms: string[]
@@ -633,6 +733,73 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      reviews: {
+        Row: {
+          content_id: string
+          content_version_id: string
+          created_at: string
+          dropped_findings_count: number
+          finding_count: number
+          id: string
+          limitations: Json
+          run_at: string
+          run_by: string
+          status: string
+          version_number: number
+          workspace_id: string
+        }
+        Insert: {
+          content_id: string
+          content_version_id: string
+          created_at?: string
+          dropped_findings_count?: number
+          finding_count?: number
+          id?: string
+          limitations?: Json
+          run_at?: string
+          run_by: string
+          status: string
+          version_number: number
+          workspace_id: string
+        }
+        Update: {
+          content_id?: string
+          content_version_id?: string
+          created_at?: string
+          dropped_findings_count?: number
+          finding_count?: number
+          id?: string
+          limitations?: Json
+          run_at?: string
+          run_by?: string
+          status?: string
+          version_number?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_content_version_id_fkey"
+            columns: ["content_version_id"]
+            isOneToOne: true
+            referencedRelation: "content_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rule_history: {
         Row: {
@@ -937,6 +1104,17 @@ export type Database = {
       purge_workspace_content: {
         Args: { _workspace_id: string }
         Returns: undefined
+      }
+      record_review: {
+        Args: {
+          _actor: string
+          _content_id: string
+          _content_version_id: string
+          _dropped: number
+          _findings: Json
+          _limitations: Json
+        }
+        Returns: string
       }
       remove_demo_knowledge: {
         Args: { _workspace_id: string }
