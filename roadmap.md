@@ -15,7 +15,8 @@
 - [x] Reproduce and resolve recoverable protected-redirect page-loading warning; all five signed-out workspace redirects verified without errors.- [x] Workspace switcher: remember last workspace, show role, prefer invited workspace
 
 ## Deferred Phase 1 items
-- [ ] One-hour session persistence with page refresh (deferred by owner)
+- [x] One-hour session persistence with page refresh — PASSED (owner manual verification, 2026-11-05 15:17 UTC)
+- [ ] 3 Phase 1 profile tests needing a real signed-in session — PENDING
 - [ ] Full live cross-workspace isolation as each non-Admin role
 - [ ] Run 11 skipped live tests with a controlled fixture file
 
@@ -66,4 +67,8 @@
 - [x] Phase 6: server functions + rechecking
 - [x] Phase 6: UI (review screen, dialogs, queue, decisions, comments, timeline)
 - [x] Phase 6: security, concurrency, browser E2E, full regression, progress report
-- [ ] Phase 6 owner acceptance
+- [x] Phase 6 owner acceptance — COMPLETE (2026-11-05 15:17 UTC)
+
+## Phase 7
+- [x] Phase 7 plan prepared (Round 3 requirements) — awaiting owner approval
+- [ ] Phase 7 implementation (not started)

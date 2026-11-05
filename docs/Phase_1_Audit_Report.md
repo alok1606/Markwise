@@ -323,3 +323,8 @@ Decision: PENDING. Phase 2 not started; awaiting owner approval.
 Skipped automated tests (require a controlled test-account fixture file): 8 live database-authorization tests (including cross-workspace denial), 3 live profile-validation tests.
 
 Not every Phase 1 acceptance criterion has passed. Phase 1 status: accepted by owner with deferred items (session persistence, full live cross-workspace isolation, skipped live tests). Project is ready for Phase 2, which will not begin until the owner explicitly approves.
+
+## Owner update (2026-11-05 15:17 UTC)
+- One-hour session persistence: **PASSED** — owner manual verification; the application remained signed in after one hour. No longer deferred.
+- Three profile tests requiring a real signed-in session: **PENDING** (skipped, not counted as passed).
+- Full live cross-workspace isolation as each non-Admin role in Phase 1 scope remains as previously documented.

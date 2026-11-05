@@ -1,6 +1,12 @@
 # Phase 6 — Review Actions and Approval Workflow: progress report (2026-11-05)
 
-Status: **IMPLEMENTED — PENDING owner acceptance.** Not marked complete. Phase 7 has not started.
+Status: **COMPLETE** — formally accepted by the owner on 2026-11-05 15:17 UTC. Phase 7 has not started.
+
+Final regression: **245 passed, 0 failed, 3 skipped** (the 3 skipped are the Phase 1 profile tests that need a real signed-in session; never counted as passed).
+
+Accepted limitations (not resolved):
+1. Failed automatic-check attempts are not independently persisted as records.
+2. The Manager browser approval workflow was tested using stand-in AI results, not a naturally clean result from the real AI model.
 
 Approved plan: owner approval 2026-11-05 14:07 UTC, with clarifications (recoverable "Run AI review" for missing AI state; Phase 5 retry and duplicate rules; Managers see changes-requested items read-only; Phase 1–5 behaviour preserved unless an additive change is documented).
 
