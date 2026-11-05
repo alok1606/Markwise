@@ -1,4 +1,5 @@
 # Phase 1
+- [x] Final acceptance recheck: 19 tests passed, eight skipped; reload/logout/invalid callback passed. Minted-fixture refresh rejected; exact real-account/session/mailbox steps documented in audit report.
 - [x] Complete comprehensive Phase 1 audit, fix confirmed bugs, and produce A–L results with external blockers; do not start Phase 2.
 - [ ] Finish full four-role/two-workspace and expiry/refresh live verification; blocked on authorized role-account fixtures and time-bound session testing.
 - [ ] Verify fresh email/Google login, reset mailbox receipt/redemption, branded sender and production redirects; blocked on owner interaction, owned sender domain and publication.

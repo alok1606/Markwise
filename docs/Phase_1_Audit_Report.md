@@ -203,3 +203,44 @@ The live profile tests require `MARKWISE_AUDIT_SESSION` pointing to a securely m
 ## Acceptance decision
 
 **Audit work is finished; Phase 1 acceptance remains pending.** Administrator access, actual profile/workspace/avatar operations, tested security denials and current build health pass. The unresolved external dependencies and missing live role/expiry coverage above prevent a blanket “all checks passed” claim. Review this report and complete the blocked authentication/role checks before approving Phase 1. Phase 2 remains untouched.
+
+## Final acceptance recheck — November 5, 2026, 10:22–10:25 UTC
+
+No working application features, schema, RLS, roles, provider settings or administrator privileges were changed in this recheck. Only this report and the task list were updated.
+
+### Fresh results
+
+| Check | Expected result | Actual result | Status |
+|---|---|---|---|
+| All retained tests with authorized owner session | Regressions pass | 19 passed, 0 failed, 8 skipped; includes three live database profile-validation tests | PASS for executed tests; skipped cases remain BLOCKED |
+| Controlled four-role account availability | Admin, Manager, Reviewer, Creator accounts available | Database contains only the designated owner with Admin role and one workspace | BLOCKED — three additional authorized accounts needed |
+| Admin status and verification | Owner remains confirmed Admin | Confirmed email and Admin read back; latest sign-in timestamp 10:20:13 UTC | PASS — readback; timestamp alone does not identify login method |
+| Administrator screen and browser reload | Valid restored session survives reload | People & permissions loaded and persisted after reload in two browser runs | PASS — restored session, not fresh password/OAuth login |
+| Explicit token refresh | Auth SDK obtains new valid session | Both attempts returned HTTP 400, `validation_failed`, “Refresh token is not valid”; no refreshed session returned | BLOCKED for real-session acceptance; attempted refresh FAILED for minted fixture |
+| Access after failed refresh | No false assertion of token renewal | Existing protected page still loaded; this proves only existing access remained valid, not successful refresh | PASS — existing access only |
+| Invalid/expired recovery callback | No password update allowed | Simulated `otp_expired` callback on reset page left Update password disabled | PASS — simulated callback safety, not real-token elapsed expiry |
+| Logout | Session ends and protected pages denied | UI sign-out followed by each of five protected routes redirected to login | PASS |
+| Runtime errors in exercised screens | No page errors | Both browser runs recorded zero page errors | PASS |
+| Managed delivery logs since 10:10 | Establish dispatch outcome if available | No events in visible window for owner; does not prove delivery or failure | BLOCKED — inbox/delivery evidence missing |
+| Fresh signup/reset receipt and link redemption | Mail received and links complete | No mailbox access or new email-only account available; not claimed passed | BLOCKED — owner interaction |
+| Two populated workspace RLS checks | Foreign reads/modifications/deletes denied | Only one real workspace exists; no second populated workspace was invented | BLOCKED |
+
+**Refresh interpretation:** the authorized preview-session fixture was minted for inspection, not obtained through a normal email/password or Google login. Its refresh token was rejected. Do not infer that real user refresh is broken from this fixture error, and do not claim refresh passed because the old access token still worked. A normal signed-in session is required to reproduce the refresh check meaningfully. Natural expiry, automatic refresh and revoked-session handling remain NOT TESTED. No production behavior was changed to force this test through.
+
+**Skipped integration tests (eight):** creator unrelated-profile read; creator direct-role write; creator self-promotion function; final-admin demotion fixture test; admin foreign-workspace rename fixture test; creator audit insert; admin foreign populated-workspace read; creator profile-email write. All remain skipped for lack of controlled credentials/accounts, not passed. The separate owner browser denials in the earlier audit do not replace the two-account suite.
+
+### Exact owner steps to unblock acceptance
+
+1. Sign in to Markwise with your normal email/password or Google account. Do not paste any password, email link or token into chat. Tell me which sign-in method you completed so I can recheck the resulting activity/session.
+2. Create **three controlled accounts using real email addresses or aliases you own and can receive mail at**. For the fresh signup-confirmation test, use Markwise Create account, not Google, and redeem a newly received confirmation email once. Do not use invented email addresses. Record whether the email arrived in inbox or spam and whether confirmation completed.
+3. If account provisioning through the owner interface is preferred for role tests, use **More → Users → Add user → Create new user** with three controlled addresses and passwords. These accounts are already confirmed, so this path does **not** replace the email-signup confirmation test.
+4. As your existing Admin, open Markwise **Users**, add each confirmed account to your workspace, and assign **Creator**, **Manager** and **Reviewer** respectively. Keep your own Admin role unchanged. Each account's signup provisions its own Creator workspace; keep those separate workspaces to enable two-populated-workspace isolation checks. Tell me which controlled account corresponds to each role; do not send passwords.
+5. Sign in as each controlled account through the preview when requested. I can verify that account's page/navigation/database access using its authorized session. Session minting for another account may show a permission card; approve only the controlled account being tested.
+6. In a normal signed-in session, reload the browser and confirm your workspace remains accessible. Then let me verify an explicit refresh against that genuine session; natural expiration/automatic refresh requires a separate elapsed-expiry check. A reload by itself is not a refresh-token test.
+7. From Markwise **Forgot password**, request a new reset email for a controlled mailbox. Check inbox and spam; open the newest link, set a new password, and sign in with it. Tell me the receipt and completion outcomes, without sharing the link/password. Reusing the consumed link should not allow another reset; actual elapsed expiration remains a separate test.
+
+**Email configuration:** default managed authentication sending remains the supported delivery path. A verified custom sender domain is optional for default auth delivery and required only for Markwise-branded sender/templates. No custom sender domain is currently configured; no external SMTP credentials are required. Mailbox receipt is still unverified. Production redirects remain unverified because no application publication was authorized.
+
+**Unresolved security verification:** full non-admin role tests, cross-workspace CRUD matrix, real refresh/expiry, account-switch behavior and avatar MIME/content spoofing remain unverified. The previous fixes remain in source and their executed regressions pass; this is not a claim that every security scenario passed.
+
+**Decision:** Phase 1 remains **PENDING ACCEPTANCE**, not COMPLETE. Nineteen tests passed, eight skipped; the minted-fixture token-refresh attempt failed and needs a real login session. Account creation and mailbox steps above require owner participation. Phase 2 has not started; wait for owner approval.
