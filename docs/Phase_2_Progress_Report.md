@@ -89,3 +89,13 @@ Cross-workspace via server: reading the other workspace denied; updating/deletin
 
 ### Decision
 Phase 2: PASS for security verification (server authorization, database RLS, cross-workspace isolation). Still carried over, not passed: Phase 1 one-hour session persistence and the 11 skipped Phase 1 live tests. Phase 3 not started.
+
+## Re-run 2026-11-05 12:10 UTC — after type-check fix
+A successful build or type check is not treated as security evidence; all checks below were re-executed against the live backend with five fresh temporary accounts (Admin A, Manager, Reviewer, Creator in workspace A; Admin B in workspace B), then fully deleted (0 accounts, 0 workspaces left).
+- Database RLS and storage (`knowledge-rls-live.test.ts`, real signed-in sessions): 59 passed, 0 failed, 0 skipped.
+- Server authorization (real server-function requests per role): Admins allowed for all 8 own-workspace operations; Manager, Reviewer, Creator allowed for 0 of 13 operations (39 denials).
+- Cross-workspace via server: both Admins denied reading, updating, deleting and downloading the other workspace's records and files, by ID and by workspace ID. The earlier weakness is fixed: the delete step now uses a separate record, so cross-workspace targets still existed when attacked.
+- Full regression suite (no fixture): 45 passed, 0 failed, 81 skipped (59 RLS + 11 Phase 2 live + 11 Phase 1 live; need a private test-account file that is deliberately not stored in the project).
+- The server-function check is a one-off script run, not part of the saved automated suite.
+
+Decision: Phase 2 security verification PASSED. Phase 2 awaits owner acceptance. Phase 1 deferred items unchanged. Phase 3 not started.
