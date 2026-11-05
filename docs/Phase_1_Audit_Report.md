@@ -286,3 +286,8 @@ Decision: PENDING — sole blocker is normal-login session refresh after about o
 - Custom verified sender domain and branded email templates: not configured. Not a Phase 1 blocker.
 
 Email delivery and authentication workflows: PASSED. Phase 1 remains PENDING only on normal-login session refresh after about one hour.
+
+## Final acceptance recheck (2026-11-05 11:24 UTC)
+- One-hour session persistence: NOT PASSED YET (condition not met). The earliest current session began at 10:36 UTC (about 48 minutes ago); no session has reached one hour, and auth logs show no refresh-token renewal in the last 24 hours. Owner asked for PASS only if the session stayed authenticated after one hour and a refresh; that cannot have happened before about 11:36 UTC.
+- Regression tests: 28 passed, 0 failed, 11 skipped (live DB tests; no controlled fixture file).
+- Decision: PENDING. Sole blocker: one-hour session persistence with page refresh. Phase 2 not started.
