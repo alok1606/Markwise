@@ -83,3 +83,5 @@
 
 ## Round 2 polish (requested 5 Nov 2026)
 - [ ] Plan for dashboard text, reviewer name, demo, README, live check, Activity, AI-call log, AI page; awaiting owner approval
+- [x] Owner approved tasks 1, 1b, 3, 4, 5, 6, 7, 8, 9; task 2 only if privacy-safe without changing rules
+- [ ] Blocked: confirm hackathon name (CodeTitan vs CodeNexus) before any changes
