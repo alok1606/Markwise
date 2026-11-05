@@ -26,5 +26,9 @@
 - [x] Schema, RLS, storage, versioning and audit
 - [x] Brand profile, guidelines, rules, facts, glossary, visual identity, dashboard
 - [x] Admin live browser checks
-- [ ] Live check: Manager, Reviewer, Creator see "Administrator access required" on /knowledge (needs owner sign-in)
-- [ ] Run 11 live knowledge-base authorization tests (needs controlled fixture file)
+- [x] Live check: Manager, Reviewer, Creator see "Administrator access required" on /knowledge (owner-performed)
+- [x] Live server authorization, RLS and cross-workspace tests run with temporary accounts
+- [x] Phase 2 COMPLETE (owner-approved 2026-11-05)
+
+## Phase 3
+- [ ] On hold until the owner says go
