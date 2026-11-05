@@ -72,3 +72,8 @@
 ## Phase 7
 - [x] Phase 7 plan prepared (Round 3 requirements) — awaiting owner approval
 - [ ] Phase 7 implementation (not started)
+
+## Phase 7 planning (owner review 5 Nov 2026)
+- [x] Owner decisions folded into the Phase 7 plan (caps, privacy, Office rejection, judge accounts, gates)
+- [ ] Awaiting explicit owner instruction to begin Phase 7.0 (not started)
+- [ ] Confirm Round 3 closing time and early-work eligibility with organisers (owner)
