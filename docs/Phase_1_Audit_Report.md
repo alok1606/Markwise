@@ -276,3 +276,13 @@ One-hour session persistence: NOT VERIFIED. No refresh-token grant appears in au
 Regression tests: 28 passed, 0 failed, 11 skipped (live DB tests; no controlled fixture file).
 
 Decision: PENDING — sole blocker is normal-login session refresh after about one hour. Phase 2 not started.
+
+## Email delivery and authentication workflow status (2026-11-05 11:22 UTC)
+- Signup confirmation email: delivered and verified successfully — PASSED.
+- Password-reset email: delivered successfully — PASSED.
+- Password reset: completed successfully — PASSED.
+- Login using the new password: succeeded — PASSED.
+- Delivery method: default managed authentication email delivery is in use.
+- Custom verified sender domain and branded email templates: not configured. Not a Phase 1 blocker.
+
+Email delivery and authentication workflows: PASSED. Phase 1 remains PENDING only on normal-login session refresh after about one hour.
