@@ -77,3 +77,5 @@
 - [x] Owner decisions folded into the Phase 7 plan (caps, privacy, Office rejection, judge accounts, gates)
 - [ ] Awaiting explicit owner instruction to begin Phase 7.0 (not started)
 - [ ] Confirm Round 3 closing time and early-work eligibility with organisers (owner)
+- [x] Final plan corrections: 240/300 call estimate, resolved 72-hour schedule and fallbacks
+- [ ] Implementation blocked until owner confirms the official Round 3 window and exact deadline

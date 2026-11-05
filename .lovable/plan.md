@@ -115,9 +115,30 @@ Realistic estimate if everything is done inside the 72 hours:
 - **Fits:** 7.0 essentials (Insights, Activity, AI page, AI-call log, demo page, fixes, docs); 7A; 7B for paragraphs, tables, slide text, notes and alt text.
 - **At risk:** 7C in full (embeddings, triggers, batching, notifications) on top of the others, plus the 300-call accuracy run time and rate limits.
 - **Does not fit comfortably:** all five phases with full live security and browser evidence each, plus the PDF and submission docs.
-- **Priority if time runs short:** keep security and the central workflow intact; then 7A, 7B and 7C (scored 20 points, against the exact Pack wording); then the 7.0 items that carry 2.5 points each in completeness. The import assistant is the 7.0 item most likely to be cut, and would be reported as unfinished. Any cut is reported honestly, never hidden.
+## 5b. Resolved order and 72-hour schedule
+**One order, with no conflict:** the phase sequence stays 7.0 → 7A → 7B → 7C → 7D, each with its own approval gate. To protect the three mandatory improvements, 7.0 is split:
+- **7.0-core** (inside the sequence): dashboard text, reviewer name, demo page, judge accounts, Activity tab, Admin AI-call log, public AI page.
+- **7.0-extended** (Insights, import assistant): built after 7C. If time is short, these are the ones reported as unfinished.
+
+The three improvements are never reduced. If one can't be finished, it's reported as incomplete against its full acceptance criteria.
+
+Schedule (hours from Round 3 open, 10 Nov 10:00 IST; starts only after the window and deadline are confirmed):
+
+| Hours | Work | Depends on | Gate |
+|---|---|---|---|
+| 0–8 | 7.0-core + report | — | Owner approval |
+| 8–22 | 7A harness, dataset, tests; start the 240-call run | 7.0 gate | Owner approval (run may finish in the background) |
+| 22–36 | 7B DOCX/PPTX + tests | 7A gate | Owner approval |
+| 36–54 | 7C: dimension check first, then extension, scan, flags, notifications, tests | 7B gate; your choice if the vectors are too large | Owner approval |
+| 54–62 | 7.0-extended (Insights, then import assistant) | 7C gate | Owner approval |
+| 62–70 | 7D: hardening, full regression, README, disclosure, PDF evidence | all | Owner approval |
+| 70–72 | Buffer and submission | — | — |
+
+**Fallbacks, in order:** (1) never trade away security or Phase 1–6 behaviour. (2) Drop the import assistant, then Insights, and report both as unfinished. (3) If 7C slips, deliver exact matching, flags and notifications with a recorded semantic search status, and report the semantic part incomplete. Its acceptance criteria stay unchanged. (4) Shorten approval-gate wait times by sending each report the moment it's ready.
+
+**Precondition:** no implementation until you confirm the official Round 3 window and exact deadline.
 
 ## 6. Cost, usage and risks [A: estimates]
-- **AI calls:** accuracy harness about 250–750 calls per full run depending on repeats; impact scans of 1–25 calls each; embeddings are cheap per chunk; import assistant about 1 call per document. Costs scale with the caps above.
+- **AI calls:** default accuracy run = 40 cases × 2 modes × 3 repeats = **240 calls**, with a **hard cap of 300 per run including retries**. Impact scans: at most 25 AI re-reviews per batch. Embeddings are very cheap per piece of text (see the listed rates in section 5). Import assistant: about 1 call per document. Credit cost per call depends on draft length and is shown as an estimate before each run.
 - **Cloud:** small extra tables. Embedding storage is minor at demo scale. Batch jobs must fit server time limits, so they run in chunks.
 - **Risks:** 72 h window with 4 workstreams (7.0 and 7A are highest priority for scoring); AI rate limits during runs; real AI over-flagging will lower the measured precision, which must be reported honestly; complex Office XML (grouped shapes, SmartArt) may be partly unsupported and must be documented; embedding model availability [A]; keeping all Phase 1–6 security unchanged.
