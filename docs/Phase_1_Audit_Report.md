@@ -244,3 +244,9 @@ No working application features, schema, RLS, roles, provider settings or admini
 **Unresolved security verification:** full non-admin role tests, cross-workspace CRUD matrix, real refresh/expiry, account-switch behavior and avatar MIME/content spoofing remain unverified. The previous fixes remain in source and their executed regressions pass; this is not a claim that every security scenario passed.
 
 **Decision:** Phase 1 remains **PENDING ACCEPTANCE**, not COMPLETE. Nineteen tests passed, eight skipped; the minted-fixture token-refresh attempt failed and needs a real login session. Account creation and mailbox steps above require owner participation. Phase 2 has not started; wait for owner approval.
+## Final acceptance audit (2026-11-05 11:06 UTC)
+- Automated: 28 passed, 0 failed, 11 skipped (8 live DB-authorization + 3 live profile-validation tests; skipped because no controlled test-account fixture file is configured).
+- Stored roles: Admin (admin, shared workspace); Manager/Reviewer/Creator each hold their invited role in the shared workspace plus Creator in their own personal workspace. All four emails confirmed.
+- Owner-reported live checks: Manager, Reviewer, Creator logins and role labels/navigation correct.
+- Auth logs (7 days): no signup-confirmation, password-recovery, verify or logout events recorded; email delivery not evidenced in this window.
+- Decision: PENDING. Blockers: non-admin /users denial and cross-workspace denial not exercised live as those accounts in this audit; real-login session refresh unverified; fresh signup-confirmation and reset-email receipt unverified; live DB tests skipped.
