@@ -1,66 +1,48 @@
-# Phase 5 — AI Review Engine (plan for approval)
+# Phase 6 — Review Actions and Approval Workflow (plan for approval)
 
-Source: Master Specification Part 7 G (AI review engine), Part 5 (`findings`, `ai_calls`), Part 3 (AI). Nothing here is built until you approve.
+Source: Master Specification Part 7.H (Review screen), 7.I (Approval workflow), Part 4 roles, Part 5 `approvals`/`comments`, Part 8 security, Part 9 tests 12–15. Phases 1–5 remain unchanged except additive links.
 
-## What it does
-After a Creator submits content and the automatic checks run, Markwise sends that exact version to the AI, together with only the workspace's approved, active rules, facts and glossary. The AI returns structured findings. Every finding is checked by the server before it is saved; anything that can't be proven against the workspace's own sources is downgraded to "Needs checking" with no citation. Results appear in the existing "Automatic checks" area as a separate "AI review" section, clearly labelled as AI.
+## 1. Features
+- Two-column review screen: content on the left with highlighted findings (underline + icon, not colour alone) on the exact reviewed version; findings on the right sorted by severity with category, confidence, quote, explanation, cited source, "Needs checking" state and suggested rewrite.
+- Finding actions (Creator, own draft or returned content): Accept suggestion, Edit suggestion, Dismiss with mandatory reason. Original vs proposed shown with additions/removals. Accept/Edit create a new immutable content version; the original is preserved. Each action records user, time, outcome and final text.
+- Submit for approval: allowed only when no unresolved high/critical findings remain on the latest version.
+- Routing: if claim, legal or cannot_verify findings exist, Creator must pick a named Reviewer from the same workspace; otherwise content goes to the Manager queue.
+- Reviewer: "Review Queue" of assigned items only; inspect findings; approve or reject with mandatory comment.
+- Manager: all permitted submitted content, status filter, approve clean content, reject with reason. Managers cannot approve items that require a Reviewer.
+- Threaded comments with author and timestamp; activity history per content.
+- Creators can never approve their own content.
 
-Humans keep final control: the AI only suggests. Nothing is approved, edited or published automatically. Accepting/dismissing suggestions and approvals are later phases.
+## 2. Status lifecycle (enforced in the database)
+```text
+draft -> submitted(checked) -> pending_manager | pending_reviewer
+pending_* -> approved | changes_requested
+changes_requested -> (Creator edits, new version) -> submitted ...
+```
+Illegal transitions (skipping stages, approving unassigned items, re-approving) are rejected server-side.
 
-## Scope
-- Text and PDF (extracted, confirmed text) reviewed by the AI.
-- Images: vision review of visible text only, against supplied rules and facts; the page says so.
-- Verdict for every numeric/factual claim: supported, contradicted or cannot_verify.
-- Tone findings only when an active approved tone rule exists.
-- Suggested rewrites stored, shown as suggestions only.
-- One AI review per submitted version; a retry is allowed only if the earlier attempt failed and saved nothing.
-- Deduplicate AI findings against Phase 4 findings for the same span, keeping all valid source references.
-- Understandable messages for rate limits, timeouts, invalid AI responses, insufficient AI credits, network errors and unsupported files; submission and deterministic findings always stand.
-- AI call log (provider, model, prompt version, safe summary, status) per call; no keys and no full content in logs.
+## 3. Data
+- `finding_actions`: finding, version, action (accepted/edited/dismissed), reason, final text, resulting version, actor, time. Immutable.
+- `approvals`: content, version, route (manager/reviewer), reviewer_id, assigned_by, status, comment, decided_by, decided_at. Unique open approval per content.
+- `comments`: content, parent (threading), user, message, created_at. Append-only.
+- All writes through SECURITY DEFINER functions that lock the content row, validate role, workspace, assignment and transition, and write audit events. Tables read-only via the Data API.
 
-## Server-side validation (finding rejected or downgraded when)
-1. Quoted text is not an exact substring of the version text (offsets computed by the server, never taken from the AI).
-2. Cited code doesn't exist in the content's workspace.
-3. Cited source is inactive, unapproved (facts) or not part of the material sent for this review.
-4. Cited passage is not present in the cited source.
-5. Offsets are invalid.
-6. The response fails the strict schema (whole response rejected, nothing saved).
-Downgraded findings become cannot_verify with no verified citation; the count of rejected/downgraded findings is recorded on the review.
+## 4. Permissions
+| Role | Access |
+|---|---|
+| Creator | Own content; act on findings; submit; comment on own items |
+| Manager | Workspace submitted content; approve/reject manager-routed items; comment |
+| Reviewer | Only assigned items (content, findings, comments); approve/reject with comment |
+| Admin | No content access (unchanged); Knowledge Base unchanged |
+Reviewer read access to assigned content/findings/files is added narrowly by assignment; no other policy widened.
 
-## Permissions (unchanged from Phases 3–4)
-- Creator: runs/reads AI review for own submitted content.
-- Manager: reads AI findings for submitted content in their workspace.
-- Reviewer and Admin: no content access yet (review queue/approval come later).
-- Other workspaces and signed-out: no access.
-- Knowledge Base stays Admin-only; the server reads it with server privileges only after confirming the caller owns the submitted content.
+## 5. UI
+- Review screen on content detail; Review Queue page (Reviewer); approvals filter on All Content (Manager); reviewer picker in submit dialog; comment thread; activity timeline. Keyboard-accessible dialogs and status text for screen readers.
 
-## Out of scope
-Accepting/dismissing findings, applying rewrites, comments, reviewer assignment, approval workflow, Insights, AI transparency page, guideline import assistant.
+## 6. Testing and acceptance
+- Unit: transition table, routing rules, diff/offset handling (Unicode), dismissal reason required.
+- Live (temporary accounts, two workspaces): all four roles; Reviewer sees only assigned items; Manager cannot approve reviewer-routed items; Creator cannot self-approve or bypass assignment; cross-workspace reviewer selection rejected; immutability of actions/approvals/comments; audit entries; race between approval and edit.
+- Browser end-to-end: submit -> findings -> accept/edit/dismiss -> route -> approve/reject -> comments.
+- Full regression; Phases 1–5 tests must still pass. Skipped tests reported separately.
 
-## Technical details
-- Architecture: TanStack Start authenticated server function (`runAiReview`) instead of an `ai-review` Edge Function; same security role (server-only, credentials never in the browser). Called after `submitContent` and via a retry button.
-- AI: Lovable AI Gateway, default Gemini Flash model with vision (`google/gemini-3-flash-preview`); tool calling with a strict JSON schema (quoted_text, verdict, category, severity, confidence, explanation, cited_code, cited_passage, suggested_text). If unavailable, stop and ask before switching model. Prompt text = spec system instruction verbatim, versioned (`prompt_version`).
-- Pure module `src/lib/ai-validate.ts`: schema parse, span location (first exact match, UTF-16), citation checks, downgrade, dedup against deterministic findings. Fully unit-tested without network.
-- DB migration:
-  - `reviews`: add `source` ('deterministic' | 'ai'); unique (content_version_id, source) replacing per-version uniqueness, so each version gets one of each.
-  - `findings`: reuse table (`source='ai'`, `suggested_text`, `confidence`, verdict mapped to outcome: supported/contradicted/cannot_verify; plus existing violation for rule findings).
-  - New `ai_calls` (id, workspace_id, content_id, content_version_id, provider, model, prompt_version, what_was_sent_summary, status, error_kind, created_at); RLS read = Admin of workspace only; writes service-role only; immutable.
-  - Extend `record_review` (or new `record_ai_review`) SECURITY DEFINER, service-role only: atomic review + findings + audit `ai_review_completed`; re-validates citations in-workspace and active.
-  - Revoke default grants on new table (signed-in SELECT only, signed-out none), as done in Phases 2–4.
-- UI: "AI review" section in findings panel with "AI" badge, verdict labels, verified citation only when validated, suggested text, limitation notes and error state with retry.
-- Tests:
-  - Unit: validation of fabricated quotes, fake codes, inactive/unapproved sources, passage mismatch, bad offsets, invalid schema, dedup, emoji offsets.
-  - Live security (temporary accounts, two workspaces): role access, cross-workspace denial, duplicate refusal, atomic rollback, ai_calls Admin-only, immutability, signed-out denial.
-  - AI call mocked in tests; one real end-to-end browser run (text, PDF, image) with a real AI call, reported honestly.
-  - Full regression of Phases 1–4.
-
-## Acceptance criteria
-- Fabricated citations never shown as verified; downgrade counts recorded.
-- Numeric claims without approved support are cannot_verify.
-- One AI review per version, tied to the exact version; atomic.
-- Role and workspace access identical to Phase 4; Knowledge Base still Admin-only.
-- Errors show understandable messages; submission and Phase 4 findings unaffected.
-- All Phase 1–4 tests still pass; skipped tests reported as skipped.
-
-## Still open from Phase 1
-One-hour session persistence (PENDING/DEFERRED) and the remaining skipped Phase 1 live tests.
+## 7. Out of scope
+Insights dashboard, AI transparency page, guideline import assistant, demo-data expansion. Phase 1 deferred items stay documented.
