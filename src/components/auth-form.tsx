@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowRight, Eye, EyeOff, LoaderCircle } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Gavel, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,6 +47,14 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'forgot' | 'rese
   }
   async function signInWithGoogle() { setBusy(true); setError(''); try { const result = await lovable.auth.signInWithOAuth('google', { redirect_uri: window.location.origin }); if (result.error) throw result.error; } catch (e) { setError(e instanceof Error ? e.message : 'Sign-in failed'); } finally { setBusy(false); } }
   return <div className="min-h-screen bg-background"><header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-7"><Link to="/"><Brand /></Link><Button asChild variant="ghost"><Link to="/">Back to home <ArrowRight /></Link></Button></header><main className="mx-auto max-w-md px-6 pb-16 pt-14"><p className="mb-4 text-xs font-semibold uppercase text-primary">Your brand. In good hands.</p><h1 className="text-3xl font-semibold">{title}</h1><p className="mb-8 mt-3 text-sm leading-6 text-muted-foreground">{mode === 'signup' ? 'A considered space for your team and your brand.' : mode === 'login' ? 'Sign in to your Markwise workspace.' : 'Keep your account secure with a new password.'}</p>
+    {mode === 'login' && <section aria-label="Hackathon judge demo access" className="mb-8 rounded-lg border border-primary/25 bg-accent/60 p-5">
+      <div className="flex items-center gap-2"><Gavel className="h-4 w-4 text-primary" /><h2 className="text-sm font-semibold">Hackathon Judges — Demo Access</h2></div>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">Welcome, CodeNexus India 2026 judges! Explore Markwise using our dedicated Judge Demo environment.</p>
+      <div className="mt-3 flex flex-wrap gap-1.5">{['Creator', 'Manager', 'Reviewer', 'Admin'].map(r => <span key={r} className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium">{r}</span>)}</div>
+      <p className="mt-3 text-xs text-muted-foreground">Demo Workspace: <span className="font-medium text-foreground">Judge Demo — Nimbus Onboard</span></p>
+      <p className="mt-3 rounded-md border border-primary/30 bg-background p-2.5 text-xs font-medium">Please use the demo credentials provided in the private hackathon submission.</p>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">Each role provides a different view of Markwise&rsquo;s brand governance and approval workflow.</p>
+    </section>}
     {(mode === 'login' || mode === 'signup') && <><Button className="w-full" variant="outline" disabled={busy} onClick={signInWithGoogle}>Continue with Google</Button><div className="my-6 flex items-center gap-4 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />or continue with email<span className="h-px flex-1 bg-border" /></div></>}
     <form onSubmit={handleSubmit(submit)} className="space-y-5">
     {mode === 'signup' && <div className="space-y-2"><Label htmlFor="full_name">Full name</Label><Input id="full_name" autoComplete="name" maxLength={100} required {...register('full_name')} /></div>}
