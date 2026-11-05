@@ -1,23 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-// The home route ships no og:image, so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
-export const Route = createFileRoute("/")({
-  component: Index,
-});
-
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { ArrowRight, ArrowUpRight, ShieldCheck, FileCheck2, BookOpen, UserRoundCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Brand } from '@/components/brand';
+import { useAuth } from '@/components/auth-provider';
+import { meta } from '@/lib/access';
+import workspaceImage from '@/assets/markwise-workspace.jpg';
+export const Route = createFileRoute('/')({ head: () => meta('Markwise — pre-publication brand governance', 'Brand governance that explains, cites and suggests, while leaving the final decision to people.'), component: Index });
 function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
+  const { user } = useAuth();
+  return <div className="bg-background"><header className="mx-auto flex h-24 max-w-7xl items-center justify-between px-6 lg:px-12"><Link to="/"><Brand /></Link><div className="flex items-center gap-2 sm:gap-4">{user ? <Button asChild><Link to="/dashboard">Open workspace <ArrowUpRight /></Link></Button> : <><Button asChild variant="ghost"><Link to="/auth">Sign in</Link></Button><Button asChild><Link to="/signup">Get started <ArrowUpRight /></Link></Button></>}</div></header>
+  <main><section className="landing-hero relative overflow-hidden"><img src={workspaceImage} width={1600} height={1008} className="absolute inset-0 h-full w-full object-cover" alt="A bright contemporary studio with carefully arranged brand documents" /><div className="hero-wash absolute inset-0" /><div className="relative mx-auto max-w-7xl px-6 py-20 lg:px-12 lg:py-24"><p className="mb-7 flex items-center gap-2 text-xs font-bold uppercase text-primary"><span className="h-px w-7 bg-primary" />Before you hit publish</p><h1 className="text-6xl font-semibold leading-tight sm:text-7xl">Markwise<span className="text-primary">.</span></h1><p className="mt-5 max-w-md text-3xl font-medium leading-snug">Your brand standards.<br />Your team’s confidence.</p><p className="mt-6 max-w-md text-base leading-7 text-muted-foreground">Pre-publication brand governance that explains, cites and suggests, and leaves the decision to people.</p><div className="mt-9 flex flex-wrap items-center gap-4"><Button asChild size="lg"><Link to={user ? '/dashboard' : '/signup'}>{user ? 'Open your workspace' : 'Create your workspace'}<ArrowRight /></Link></Button><Button asChild variant="ghost"><Link to="/demo">Try the demo <ArrowUpRight /></Link></Button></div><p className="mt-7 flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-4 text-primary" />Human judgment. Always the final word.</p></div></section>
+  <section className="border-b bg-card"><div className="mx-auto grid max-w-7xl gap-5 px-6 py-7 sm:grid-cols-3 lg:px-12">{['Grounded in your approved standards', 'An explanation behind every finding', 'People stay in control'].map((text,i) => <p key={text} className="flex items-center gap-3 text-sm font-medium"><span className="text-xs text-primary">0{i+1}</span>{text}</p>)}</div></section>
+  <section className="mx-auto max-w-7xl px-6 py-20 lg:px-12"><div className="flex flex-wrap items-end justify-between gap-5"><div><p className="mb-3 text-xs font-semibold uppercase text-primary">A more considered workflow</p><h2 className="text-3xl font-semibold">From first draft to final decision.</h2></div><p className="max-w-sm text-sm leading-6 text-muted-foreground">One shared standard for the people shaping your brand. Built around clarity, not guesswork.</p></div><div className="mt-10 grid gap-10 md:grid-cols-3">{[{ icon: BookOpen, title: 'Set the standard', text: 'Bring your approved guidelines, facts and terminology together.' }, { icon: FileCheck2, title: 'Understand the findings', text: 'Review what needs attention, why it matters and the source behind it.' }, { icon: UserRoundCheck, title: 'Make the decision', text: 'Consider suggestions and give your team the final say before publication.' }].map((item,i) => <div key={item.title} className="border-t pt-6"><div className="mb-6 flex justify-between"><item.icon className="size-6 text-primary" /><span className="text-xs text-muted-foreground">0{i+1}</span></div><h3 className="text-lg font-semibold">{item.title}</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">{item.text}</p></div>)}</div></section></main><footer className="border-t"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-5 px-6 py-7 lg:px-12"><Brand /><span className="text-xs text-muted-foreground">Thoughtful governance. Confident publishing.</span><Link to="/auth" className="text-sm">Sign in <ArrowUpRight className="inline size-4" /></Link></div></footer></div>;
 }

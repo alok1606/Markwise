@@ -62,20 +62,20 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.25 0.015 250);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
+  --primary: oklch(0.40 0.075 164);
   --primary-foreground: oklch(0.984 0.003 247.858);
   --secondary: oklch(0.968 0.007 247.896);
   --secondary-foreground: oklch(0.208 0.042 265.755);
   --muted: oklch(0.968 0.007 247.896);
   --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
+  --accent: oklch(0.95 0.018 164);
   --accent-foreground: oklch(0.208 0.042 265.755);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
@@ -140,5 +140,15 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: 'Manrope', sans-serif;
+    letter-spacing: 0;
   }
 }
+
+.landing-hero { min-height: 590px; }
+.hero-wash { background: linear-gradient(90deg, color-mix(in oklab, var(--background) 92%, transparent), color-mix(in oklab, var(--background) 68%, transparent) 42%, transparent 75%); }
+@media (max-width: 640px) {
+  .landing-hero { min-height: 600px; }
+  .hero-wash { background: color-mix(in oklab, var(--background) 82%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }

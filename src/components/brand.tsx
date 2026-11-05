@@ -1,0 +1,2 @@
+import { CheckCheck } from 'lucide-react';
+export function Brand() { return <span className="inline-flex items-center gap-2.5 text-xl font-semibold"><span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground"><CheckCheck className="size-5" /></span>Markwise<span className="text-primary">.</span></span>; }

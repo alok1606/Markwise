@@ -11,3 +11,9 @@
 
 ## Markwise specification reference
 - Preserve `docs/Markwise_Master_Project_Specification.md` as the verbatim user-supplied specification and consult it before phase implementation, so requirements remain available across sessions.
+
+## Foundation architecture
+- Use TanStack Router and Start authenticated server functions, preserving the platform's supported full-stack runtime.
+- Keep workspace membership and roles separate; mutations use authenticated database functions with workspace authorization and audit writes to prevent client privilege escalation.
+- Public signup provisions only a creator workspace; first administrator promotion is an explicit owner-authorized operation outside public app endpoints.
+- Store avatars privately under user-ID paths with owner-only storage policies; resolve temporary signed URLs for display.
