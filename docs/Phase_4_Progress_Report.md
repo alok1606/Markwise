@@ -43,7 +43,21 @@ Status: **PENDING owner acceptance.** Not marked complete. No AI review, approva
 - Two first-run failures were test-setup issues, not product defects, and were fixed in the tests: leftover browser-test data changed expected counts.
 - All temporary accounts, workspaces, content, reviews, findings and files deleted (verified 0 left).
 
+## PDF browser acceptance test (2026-11-05, actual)
+Seven fresh temporary accounts across two workspaces (Admin, Manager, Reviewer, Creator, second Creator in A; Admin and Creator in B). Workspace A got rule PDF-01 (banned term "guaranteed") and glossary term "customers" (avoid "clients"). Test PDF: one page, text "Our clients enjoy guaranteed onboarding that is 40% faster."
+- Upload and browser-side extraction: PASSED — extracted text shown exactly.
+- Creator confirmation: PASSED — saving without ticking the confirmation was refused ("Review the extracted text and confirm it before saving."), nothing was saved; after confirming, the draft saved.
+- Stored file: `application/pdf`, kept on versions 2 and 3; version 1 has no file.
+- Submission: PASSED — status submitted, version 3.
+- Checks: PASSED — 3 findings, 0 dropped, status completed: banned term "guaranteed" (18–28, violation, cites PDF-01), terminology "clients" (4–11, violation, cites "customers"), numeric claim "40%" (48–51, **cannot_verify**, shown "Needs checking"). Alt-text/contrast/palette checks do not apply to PDFs.
+- Exact version: PASSED — exactly one review, linked to the version 3 record; every finding belongs to it, and every quote matches the saved version 3 text at its offsets.
+- Audit: content_created, content_file_uploaded, content_edited, content_submitted, review_completed recorded.
+- Browser access: Creator and same-workspace Manager saw the findings (Manager has no run button); Reviewer, Admin and workspace B Admin saw "Access required"; second Creator and workspace B Creator saw "Content not available". No console errors for any role.
+- Direct data requests: only Creator and Manager could read the review (1) and findings (3) and download the PDF; Admin, Reviewer, second Creator, workspace B Admin and Creator got 0 rows and file denied; insert and delete refused for all 7 roles; signed-out access refused.
+- Regression suite with the temporary accounts: 172 passed, 0 failed, 22 skipped (the Phase 1 live suites using a separate account file and the 3 profile tests needing a session file were not set up for this run; they passed in the earlier Phase 4 run).
+- Cleanup: all temporary accounts, workspaces, content, findings and files deleted; verified 0 left.
+
 ## Not verified / open
-- PDF submissions run the same text checks; no PDF was submitted in the browser this phase (covered by the same code path as text).
+- PDF browser acceptance: completed and passed (see above).
 - Palette sampling on JPEG may differ slightly between browsers because of decoder differences; PNG is exact.
 - Phase 1 deferred: one-hour session persistence (PENDING/DEFERRED) and 11 skipped Phase 1 live tests (8 of them ran and passed in this run with temporary accounts; 3 still need a session file).
