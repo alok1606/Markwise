@@ -21,3 +21,4 @@
 - Track password recovery in the shared auth event subscriber; the auth SDK may consume recovery URL fragments before the form renders.
 - Clear private query caches on SDK sign-out or account replacement, not only sidebar logout, to prevent stale account data rendering.
 - Resolve membership email against confirmed Auth identities and return the current Auth email for the owner's profile; the signup email copy is not authoritative after email changes.
+- Active workspace is chosen client-side by a pure selector (stored per-user choice if still a member, else invited workspace, deterministic order) and persisted in localStorage; selection is display-only and never affects roles or server authorization.

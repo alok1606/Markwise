@@ -12,4 +12,4 @@
 - [ ] Verify email-signup confirmation with a fresh valid confirmation link (observed signup links were invalid; account confirmation occurred through Google).
 - [x] Remove Lovable sign-in from login/signup as requested; retain Google, email/password, verification and recovery without backend changes.
 - [x] Run post-change authentication checks: Google request from login/signup, invalid email-login handling, live recovery request, real administrator readback/logout, mobile layout and 15 local tests passed. Fresh successful Google/password login and mailbox redemption require owner interaction; not claimed as retested.
-- [x] Reproduce and resolve recoverable protected-redirect page-loading warning; all five signed-out workspace redirects verified without errors.
+- [x] Reproduce and resolve recoverable protected-redirect page-loading warning; all five signed-out workspace redirects verified without errors.- [x] Workspace switcher: remember last workspace, show role, prefer invited workspace

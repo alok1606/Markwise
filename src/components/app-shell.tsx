@@ -1,6 +1,7 @@
 import { Link, Outlet, useNavigate, useLocation } from '@tanstack/react-router';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { chooseWorkspace, orderMemberships, roleLabel, workspaceStorageKey } from '@/lib/workspace-selection';
 import { Building2, ChevronDown, LayoutDashboard, Users, UserRound, Settings2, CircleHelp, LogOut, Menu, X, LockKeyhole } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Brand } from './brand';
@@ -11,7 +12,11 @@ const WorkspaceContext = createContext<{ id: string; name: string; role: Role }>
 export const useWorkspace = () => useContext(WorkspaceContext);
 export function AppShell() {
   const { data } = useSuspenseQuery(accessOptions); const [selected, setSelected] = useState(''); const [open, setOpen] = useState(false);
-  const workspace = data.memberships.find(m => m.workspace_id === selected) ?? data.memberships[0];
+  const userId = data.profile.id;
+  const memberships = useMemo(() => orderMemberships(data.memberships, userId), [data.memberships, userId]);
+  useEffect(() => { let stored: string | null = null; try { stored = localStorage.getItem(workspaceStorageKey(userId)); } catch { /* storage unavailable */ } setSelected(chooseWorkspace(memberships, userId, stored)); }, [memberships, userId]);
+  const workspace = memberships.find(m => m.workspace_id === selected) ?? memberships[0];
+  function selectWorkspace(id: string) { if (!memberships.some(m => m.workspace_id === id)) return; setSelected(id); try { localStorage.setItem(workspaceStorageKey(userId), id); } catch { /* storage unavailable */ } }
   const current = { id: workspace?.workspace_id ?? '', name: workspace?.workspaces?.name ?? 'Workspace', role: workspace?.role ?? 'creator' };
   const queryClient = useQueryClient(); const navigate = useNavigate(); const location = useLocation();
   async function signOut() { await queryClient.cancelQueries(); queryClient.clear(); await supabase.auth.signOut(); await navigate({ to: '/auth', replace: true }); }
@@ -20,7 +25,7 @@ export function AppShell() {
     {open && <div className="fixed inset-0 z-30 bg-foreground/30 md:hidden" onClick={() => setOpen(false)} />}
     <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r bg-sidebar px-5 py-7 transition-transform md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="flex items-center justify-between"><Link to="/"><Brand /></Link><Button variant="ghost" size="icon" className="md:hidden" aria-label="Close navigation" onClick={() => setOpen(false)}><X /></Button></div>
-      <div className="my-8 flex items-center gap-3 border-y py-4"><Building2 className="size-5 text-muted-foreground" /><div className="min-w-0 flex-1"><label htmlFor="workspace" className="text-[10px] font-semibold uppercase text-muted-foreground">Workspace</label><select id="workspace" className="w-full bg-transparent text-sm font-medium" value={current.id} onChange={e => { setSelected(e.target.value); void navigate({ to: '/dashboard' }); }}>{data.memberships.map(m => <option key={m.workspace_id} value={m.workspace_id}>{m.workspaces?.name}</option>)}</select></div><ChevronDown className="size-4" /></div>
+      <div className="my-8 flex items-center gap-3 border-y py-4"><Building2 className="size-5 text-muted-foreground" /><div className="min-w-0 flex-1"><label htmlFor="workspace" className="text-[10px] font-semibold uppercase text-muted-foreground">Workspace</label><select id="workspace" className="w-full bg-transparent text-sm font-medium" value={current.id} onChange={e => { selectWorkspace(e.target.value); void navigate({ to: '/dashboard' }); }}>{memberships.map(m => <option key={m.workspace_id} value={m.workspace_id}>{`${m.workspaces?.name ?? 'Workspace'} · ${roleLabel(m.role)}`}</option>)}</select></div><ChevronDown className="size-4" /></div>
       <p className="mb-3 text-[10px] font-semibold uppercase text-muted-foreground">Workspace navigation</p>
       <nav className="space-y-1"><Button asChild variant={location.pathname === '/dashboard' ? 'secondary' : 'ghost'} className="w-full justify-start"><Link to="/dashboard" onClick={() => setOpen(false)}><LayoutDashboard />Overview</Link></Button>
       {roleNavigation[current.role].map(label => label === 'Users' ? <Button asChild key={label} variant={location.pathname === '/users' ? 'secondary' : 'ghost'} className="w-full justify-start"><Link to="/users" onClick={() => setOpen(false)}><Users />Users</Link></Button> : <div key={label} className="flex items-center justify-between px-3 py-2.5 text-sm text-muted-foreground" aria-disabled="true"><span>{label}</span><LockKeyhole className="size-3.5" /></div>)}</nav>

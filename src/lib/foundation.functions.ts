@@ -6,7 +6,7 @@ import { profileSchema, roleSchema } from './access';
 export const getAccess = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   const [profile, memberships] = await Promise.all([
     context.supabase.from('profiles').select('*').eq('id', context.userId).single(),
-    context.supabase.from('user_roles').select('workspace_id,role,workspaces(id,name)').eq('user_id', context.userId),
+    context.supabase.from('user_roles').select('workspace_id,role,created_at,workspaces(id,name,created_by)').eq('user_id', context.userId),
   ]);
   if (profile.error) throw new Error(profile.error.message);
   if (memberships.error) throw new Error(memberships.error.message);
