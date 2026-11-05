@@ -30,7 +30,8 @@ export function buildActivity(i: ActivityInput): ActivityEvent[] {
   for (const p of i.approvals) {
     const to = p.route === 'reviewer' ? `a Reviewer${p.reviewer_id ? ` (${actorName(p.reviewer_id, i)})` : ''}` : 'a Manager';
     add({ key: `sent:${p.id}`, kind: 'sent', at: p.created_at, actor: actorName(p.assigned_by, i), title: `Sent version ${p.version_number} for approval`, detail: `Routed to ${to}`, tone: 'neutral' });
-    if (p.decided_at && DECISION[p.status]) { const [t, tone] = DECISION[p.status]; add({ key: `decision:${p.id}`, kind: 'decision', at: p.decided_at, actor: actorName(p.decided_by, i), title: `${t} version ${p.version_number}`, detail: p.decision_comment || null, tone }); }
+    const d = DECISION[p.status];
+    if (p.decided_at && d) { const [t, tone] = d; add({ key: `decision:${p.id}`, kind: 'decision', at: p.decided_at, actor: actorName(p.decided_by, i), title: `${t} version ${p.version_number}`, detail: p.decision_comment || null, tone }); }
   }
   for (const c of i.comments) add({ key: `comment:${c.id}`, kind: 'comment', at: c.created_at, actor: actorName(c.author_id, i), title: c.parent_id ? 'Replied to a comment' : 'Commented', detail: c.message, tone: 'neutral' });
   return [...out.values()].sort((a, b) => (b.at > a.at ? 1 : b.at < a.at ? -1 : a.key.localeCompare(b.key)));
