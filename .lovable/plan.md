@@ -1,221 +1,108 @@
-# Phase 7 — Round 3 improvements (plan for owner approval)
+# Markwise: Round 1 to Round 3 reconciliation and Phase 7 plan
 
-Status: PLAN ONLY. Nothing below is built. Phases 1–6 stay as they are, except for the additive changes listed here.
+Planning only. Nothing is built until the owner approves.
+Labels used: **[V]** verified in code, data or test reports · **[A]** assumption · **[D]** owner decision needed.
 
-## Sources and gaps
-- The saved Master Specification does not mention "Round 2" or "Round 3", and no separate Round 2 roadmap document has been supplied. This plan uses the Master Specification and the three Round 3 requirements as you stated them. If you share the Round 2 roadmap, I will reconcile the plan with it before implementation starts.
-- These specification items are still unbuilt and are **not** part of this plan unless you add them: Insights dashboard (7.J), AI transparency page (7.K), guideline import assistant (7.D), demo data (7.L), the mandatory end-to-end test (7.M) and the GitHub/Vercel documentation (Part 10).
-- Technology stack: no change. TanStack Start server functions stay in place of Edge Functions (already agreed), Lovable Cloud database/storage and the Lovable AI review model from Phase 5. Two new items need your approval: the PostgreSQL `vector` extension (available, not yet installed) and a browser library for reading Word and PowerPoint files (see Requirement 3).
+## 1. Requirements across the three rounds
 
-## Existing vs new
-| Area | Exists (Phases 1–6) | New in Phase 7 |
-|---|---|---|
-| Checks | 6 deterministic checks; AI review with validated citations and `cannot_verify` | Measured accuracy of both, with a no-guidelines baseline |
-| Facts/rules | Admin-only CRUD, history, fact approval | Impact scan when they change; outdated flags; notifications |
-| Content types | Text, Image, PDF (browser extraction) | DOCX and PPTX with paragraph/slide anchors |
-| Search | None | pgvector embeddings + exact matching |
-| Notifications | None | In-app notifications for content owners and assigned reviewers |
+| | Round 1 (proposal) | Round 2 (Pack: what we told judges) | Round 3 (official rules, 10–13 Nov, 72 h, no late window) |
+|---|---|---|---|
+| Stack | Next.js, FastAPI, pgvector | React/Vite, Lovable Cloud, "edge functions", Gemini Flash, no vectors | Must match reality and be runnable from the repo |
+| Promise | Cited, abstaining findings; intent-preserving diffs; guideline-gap insights | 15 "completed" features (Part C) | Finish open features, fix known faults, test main journeys, document |
+| Extras | — | Demo-mode role picker, auto-confirm email, landing "Try the demo" | The three named improvements, scored exactly against the Pack wording |
 
----
+Round 3 scoring [V]: completeness, including saying what is undone (25) · three improvements (20) · reliability with no team help, bad input, empty states and repeats (20) · usability without a walkthrough (20) · docs and credible roadmap (15). Significant AI/no-code tools must be disclosed. Each member files their own role and contribution.
 
-## Requirement 1 — Measured Accuracy Harness
+**What changed and why [V]:** the backend runs on TanStack Start server functions, not Edge Functions or FastAPI, because the platform requires it. Signup provisions a Creator workspace and Admins assign roles, so no public role picker and no auto-confirm (security decision in Phase 1). Retrieval still sends the full knowledge base, with no vectors yet. Additions beyond the Pack: workspaces, private storage with file-signature checks, immutable reviews, AI call log, check outcomes with warnings, terminal rejection.
 
-**Features and workflow.** An Admin opens a new "Accuracy" page (Admin only) and manages a labelled dataset. Each case holds:
-- a draft (clean or flawed)
-- the brand context it is judged against: a fixed snapshot of rules, facts and glossary
-- the expected findings: category, severity, exact span or quote, expected outcome (violation / contradicted / supported / cannot_verify) and the expected citation
+## 2. Round 2 feature audit (Part C list)
 
-The Admin starts a run, choosing the dataset version and a mode:
-- Markwise: deterministic checks plus AI with guidelines
-- Baseline: the same AI model and prompt structure, but with no brand guidelines and no citation validation
+| # | Pack claim | Status | Evidence / gap |
+|---|---|---|---|
+| 1 | Email login, four roles, DB security | 1 Completed and verified | Phase 1 report, live RLS tests, owner role checks. Google sign-in also added |
+| 2 | Knowledge base and version history | 1 Completed and verified | Phase 2, 59/59 live RLS. Palette is "visual identity" |
+| 3 | Guideline import assistant (AI proposes, admin confirms) | **4 Not implemented** | Guidelines tab only stores files |
+| 4 | Text, image, PDF submission with channel/audience/goal | 1 Completed and verified | Phase 3 report, browser PDF acceptance |
+| 5 | Deterministic checks (6 kinds) | 1 Completed and verified | checks.ts, 26 unit tests, Phase 4 acceptance |
+| 6 | AI check using only approved rules/facts | 2 Implemented, not fully verified | Real AI over-flags neutral text as claims; 402/429 only simulated |
+| 7 | Citations validated, invalid ones dropped | 1 Completed and verified | ai-review.ts, 20 unit and 6 live tests |
+| 8 | "Cannot verify" outcome | 1 Completed and verified | Phase 4/5 tests |
+| 9 | Span-limited diff suggestions | 2 Implemented, not fully verified | Diff in review panel; Edit path not separately browser-tested [A] |
+| 10 | Accept / edit / dismiss, reason required | 2 Implemented, not fully verified | Accept and dismiss browser-tested in Phase 6; edit not [A] |
+| 11 | Versions never overwritten | 1 Completed and verified | Immutable versions, live tests |
+| 12 | Approval routing, comments, **activity log** | **3 Partial** | Routing, decisions and comments verified. No combined Activity tab (audit rows exist, not shown) |
+| 13 | Insights dashboard | **4 Not implemented** | Sidebar label exists, no page |
+| 14 | "How Markwise uses AI" page + AI call log | **3 Partial** | Call log table exists (Admin data only, no screen). No transparency page |
+| 15 | Nimbus Onboard demo data incl. FACT-014/LEGAL-03 | **3 Partial** | Load/remove in KB works. Landing "Try the demo" page is stale Phase 1 text |
+| — | Demo-mode role picker, auto-confirm | 4 Not built (deliberate) | Security decision; must be stated honestly |
+| — | Full FACT-014/LEGAL-03 end-to-end test | 2 Not recorded as one run | Parts tested separately |
+| — | GitHub/Vercel deployment docs | **4 Not implemented** | README is a placeholder |
 
-Results stay viewable and can be exported (CSV/JSON).
+**Other known faults [V]:** the dashboard still says "Content, reviews and insights are not available yet"; reviewers see the Creator as "Workspace member"; failed check attempts are not stored; no OCR; AI takes 10–20 s; three Phase 1 profile tests are pending; full live cross-workspace isolation is incomplete for Phase 1 (done for Phases 2–6).
 
-**Metrics** (computed in pure, unit-tested code):
-- Precision, recall and F1, overall and per category and severity. A finding matches an expected one when the category matches and the spans overlap (or the quote matches exactly).
-- Hallucinated-citation rate: citations the model returned that do not exist in, or are not supported by, the sources sent. Reported both before and after Markwise validation.
-- `cannot_verify` correctness: precision and recall on cases labelled "unverifiable".
-- Clean-draft false-positive rate.
-- Baseline vs Markwise difference for each metric.
+## 3. Work order
 
-**Reproducibility.** Every run stores:
-- dataset version and hash, model ID, prompt version, mode
-- code version (commit)
-- the raw model output and a per-case hash
-- the repeat count, with each case run N times (default 3) to report spread
-- the deterministic part of the score, which must be identical between reruns
+```text
+7.0 Round 2 gap closure  ->  7A Accuracy  ->  7B DOCX/PPTX  ->  7C Impact scan  ->  7D Hardening + submission
+```
+7.0 comes first because 20 points depend on honest completeness and the Pack listed these as done.
 
-AI variance is shown as a range, never hidden. A seed dataset of about 40 cases (20 flawed, 20 clean) will be written for a fictional brand and **clearly labelled synthetic**. The headline result is never presented as a real-world accuracy claim.
+### Phase 7.0: close the Round 2 gaps
+- **Insights page** (Manager + Admin, workspace-scoped, computed only from data): findings by category and by owner, open vs decided, AI citation-valid share, dropped-by-validation count, rules dismissed 3 or more times with reasons, plus the "basic version" note and empty states.
+- **Guideline import assistant** (Admin): paste text or a PDF, AI returns structured proposals, quotes are checked against the pasted text, Confirm/Edit/Discard, nothing saved until confirmed, calls logged.
+- **Activity tab** on each item: read-only timeline from existing audit and approval rows, filtered by existing read access.
+- **Public "How Markwise uses AI" page** plus an Admin AI-call log screen.
+- **Demo:** rewrite the /demo page with the FACT-014/LEGAL-03 sentence and real steps; record one full end-to-end run.
+- Fix the stale dashboard text and show the Creator's name to reviewers.
+- Tests: unit tests for the insights calculations and import validation; live tests that the insights and activity data cannot leak across workspaces; browser runs of each screen including empty states.
 
-**Database (new, Admin-only, workspace-scoped).**
-- `eval_datasets` (versioned, immutable once used)
-- `eval_cases`
-- `eval_expected_findings`
-- `eval_runs` (status, settings, hashes)
-- `eval_case_results` (raw output, matches)
-- `eval_metrics` (stored computed values)
+### Phase 7A: measured accuracy harness (Improvement 1)
+- **DB:** eval_datasets, eval_cases (text, expected label clean/flawed), eval_expected_findings (span, category, cited code, expected verdict incl. cannot_verify), eval_runs (mode markwise|baseline, model, prompt hash, seed list, status, cost estimate), eval_case_results, eval_metrics. Admin-only RLS, workspace-scoped; runs and results immutable.
+- **Backend:** server function runs a dataset in batches with 429 back-off, resumable. Baseline = same model and prompt with no rules/facts. Matching uses span overlap plus category. Metrics: precision, recall, F1, hallucinated-citation rate, cannot_verify correctness. N repeats per mode give mean, standard deviation and range.
+- **Data:** about 40 synthetic, labelled Nimbus cases (roughly half clean, half flawed), clearly marked fictional. Labels are written by hand and are not AI-generated.
+- **UI:** Admin "Accuracy" page with dataset viewer, cost estimate and confirm, run progress, side-by-side comparison, per-case drill-down, CSV/JSON export.
+- **Tests:** unit tests for the metric maths on hand-computed fixtures; live tests that non-Admin and cross-workspace access is denied and runs are immutable; a browser run of one small run.
+- **Accept when:** a real run of both modes, with at least 3 repeats, is stored, rerunnable and shown with variance. Numbers are reported as measured, whatever they turn out to be.
 
-Results are immutable. Grants and RLS follow the Knowledge Base pattern.
+### Phase 7B: DOCX and PowerPoint review (Improvement 3)
+- New content types docx and pptx. The browser unzips with JSZip and parses the XML for paragraphs, tables (cell by cell), slide text, speaker notes and image alt text (descr). Each block gets a location (paragraph n, table r/c, slide n, notes, alt text) and a character range in the combined text.
+- Creator confirms the extracted text. The server checks ZIP signature, content type and expected parts; file size limits; the original is stored in a private, never-overwritten location.
+- Existing deterministic and AI checks run unchanged on the combined text. A pure block-map module converts offsets to "Slide 4 · notes" or "Paragraph 12". Findings show their location and the suggested edit in that block's preview.
+- **Tests:** unit tests on fixture .docx/.pptx files (tables, notes, alt text, empty slides, malformed zip, macro-enabled files rejected); live storage tests; a browser upload of each type.
+- **Accept when:** a deck with a banned term in speaker notes and a docx with a wrong figure in a table cell both produce correctly located, cited findings, and the originals stay downloadable.
 
-**Backend and AI.**
-- Runs execute on the server in small batches with a progress record, honouring 429 back-off and stopping (not retrying) on 402/403.
-- The baseline uses a separate prompt version and its own logging, so it never affects real content.
-- Every AI call is logged to `ai_calls` with a distinct purpose.
+### Phase 7C: fact-change impact scan (Improvement 2)
+- **DB:** enable the vector extension. content_chunks (version, block, text, embedding), kb_embeddings, impact_scans (trigger, changed item, old/new hash), impact_flags (content, reason, match type exact|semantic, score, cleared_by, comment), notifications. History tables stay untouched.
+- **Flow:** when a fact, rule or glossary entry changes, a scan job runs. Exact matches use old terms, figures and codes. Semantic matches use pgvector similarity above a threshold, over approved and in-progress latest versions. Checks are re-run as **new** review rows, so old reviews, findings and approvals are never changed. Items are flagged "Possibly outdated". The owner and assigned reviewer are notified in the app.
+- **Privacy:** non-Admins see a neutral reason ("An approved fact this item relied on was updated"), not the Admin-only wording [D].
+- **UI:** flag badge and banner on items, notification bell, Admin impact-scan log, clear flag with a required comment.
+- **Tests:** unit tests for exact matching; live tests that cross-workspace scans never touch other workspaces, history stays immutable and notifications reach only the right people; a browser run of editing FACT-014 and seeing the old 40% content flagged.
+- **Accept when:** that scenario works end to end, with no change to existing records.
 
-**UI.**
-- Dataset list and editor, with span selection for expected findings
-- Run launcher with a cost estimate
-- Results page: metric tables, a Markwise-vs-baseline comparison, and per-case drill-down showing expected vs found
+### Phase 7D: hardening and submission
+Pass on bad input, empty states and repeated clicks across every main screen; mobile check; first-time help; full regression (skips reported separately); README with setup, architecture and run steps; roadmap; disclosure document.
 
-**Security.** Admin only. Dataset text never goes into real content tables. Run cost is capped per run and per day (configurable).
+## 4. Round 3 submission checklist
+- [ ] Published URL opens in a private window; judge accounts or signup path documented
+- [ ] Public GitHub repo, with a README that lets someone run it
+- [ ] Updated product PDF with real screenshots
+- [ ] Honest feature list, with the Pack corrections stated (server functions, no role picker or auto-confirm, deferred items)
+- [ ] Architecture and implementation summary
+- [ ] Evidence for each of the three improvements (stored accuracy run, impact-scan demo, DOCX/PPTX demo)
+- [ ] Test results: passed, failed and skipped separately
+- [ ] Roadmap and future plan
+- [ ] Each member's own role and contribution, written by them. We never draft these for them
+- [ ] Disclosure: Lovable (builder and Cloud), Lovable AI Gateway with Gemini model, pdfjs-dist, JSZip, pgvector, TanStack Start, shadcn/ui, Vitest, Playwright
 
-**Dependencies.** Phase 4 checks and the Phase 5 AI review (same validators, reused through injection), Phase 2 Knowledge Base structures (for snapshots), and the AI call log.
+## 5. Decisions needed from you [D]
+1. Approve the vector extension, the JSZip library and the embedding model.
+2. AI budget caps: accuracy runs (for example 40 cases × 2 modes × 3 repeats ≈ 240 calls) and the maximum re-reviews per impact scan (for example 25).
+3. Use neutral reasons for non-Admins on flagged content (recommended), or show the changed fact wording.
+4. No generated edited .docx/.pptx files: confirm.
+5. Build the import assistant, Insights, Activity and transparency pages in 7.0, or instead remove those claims from the final feature list.
+6. Judge access: shared demo accounts per role, or self-signup plus a written guide (the public role picker stays off).
 
-**Tests.**
-- Unit: matching, precision/recall/F1, hallucination rate, `cannot_verify` scoring, edge cases (no expected findings, no predictions).
-- Integration: a fake-model run gives exact known metrics, and reruns give identical deterministic scores.
-- Security: non-Admins and other workspaces are denied, and results cannot be changed.
-- Browser: create a case, run it with the fake model, view the results.
-
-**Acceptance criteria.**
-- Metrics on the fake model match hand-computed values.
-- One real run of Markwise and baseline completes and is stored with all reproducibility fields.
-- A rerun from the stored settings reproduces the deterministic scores exactly and reports the AI spread.
-
-**Risks and costs.**
-- A real run costs about (cases × repeats × 2 modes) AI calls; for example 40×3×2 = 240 calls. A cost estimate is shown and confirmation is required before a run starts.
-- Synthetic data may not reflect real brands.
-- The span-matching rules affect the scores, so they will be documented.
-
----
-
-## Requirement 2 — Fact-Change Impact Scan
-
-**Features and workflow.**
-- When an Admin approves, edits, retires or deletes a fact, or creates, edits or deactivates a rule or glossary entry, a scan job is queued for that workspace.
-- The scan finds affected content in Approved, Checked, Awaiting manager/reviewer and Changes requested status (latest version only). It uses two methods:
-  - **Exact:** term and pattern matching for banned terms, glossary and numeric values in the old and new wording.
-  - **Semantic:** pgvector similarity between the changed item's old and new text and stored chunks of each content version, above a tuned threshold.
-- For each hit, the relevant checks are re-run on that version: the affected deterministic checks, plus an AI re-review when it involves facts or claims.
-- Results go into a new **impact review record**. Existing Phase 4–6 reviews, findings, approvals and versions are never changed.
-- Content with any new high/critical or contradicted finding is marked **Possibly outdated**, with the reason and the triggering change.
-- The content owner and the assigned reviewer (if any) receive an in-app notification.
-- Approved content is not automatically un-approved. A human decides: the Creator opens a new revision (new version → normal workflow), or a Manager/Reviewer clears the flag with a required comment.
-
-**Database.**
-- Enable the `vector` extension.
-- `content_chunks`: version-scoped chunks with offsets and an embedding, written by the server only.
-- `kb_embeddings`: embeddings for facts, rules and glossary entries.
-- `impact_scans`: trigger, old/new snapshot, status, counts.
-- `impact_hits`: content, version, method (exact/semantic), similarity score, re-check result.
-- `content_flags`: possibly_outdated, reason, cleared_by and comment, immutable history.
-- `notifications`: recipient, type, link, read_at; only the recipient can read it or mark it read.
-- Triggers on the Knowledge Base tables enqueue scans. Scan processing uses locked SECURITY DEFINER functions, following the existing pattern.
-
-**Backend and AI.**
-- Embeddings use the gateway's default embedding model, at the full dimensions confirmed at implementation, with the same model for documents and queries.
-- Chunks are created when a version is submitted, and backfilled for existing versions.
-- Scans run in a job, triggered on change and by a scheduled sweep for retries. Each batch is bounded, and the job pauses on 402/403.
-- Exact checks always run, even if embedding fails. A partial scan is recorded as partial, never as "no impact".
-
-**UI.**
-- "Possibly outdated" badge and reason on content pages and lists, plus an impact panel showing the triggering change and the new findings.
-- Notification bell with a list.
-- Admin "Impact scans" log on the Knowledge Base page.
-- Clear-flag dialog requiring a comment.
-
-**Security.**
-- Admins see scan logs for their workspace only.
-- Content flags are visible to the users who can already read that content (`can_read_content`).
-- Notifications are visible to the recipient only.
-- Knowledge Base text stays Admin-only; content pages show only the change summary needed to explain a flag. You will need to approve whether a fact's new wording can be shown to Creators and Reviewers, because the Knowledge Base is currently Admin-only.
-
-**Dependencies.** Phase 2 triggers and history, Phase 3 versions, Phase 4/5 checks, and Phase 6 statuses and reviewer assignment.
-
-**Tests.**
-- Unit: chunking with offsets, exact matching, threshold logic, flag rules.
-- Integration: changing a fact flags the matching approved content and notifies the owner and reviewer; unrelated content is not flagged; embedding failure still runs the exact checks and marks the scan partial.
-- Security: notifications and flags across roles and workspaces; flags and scan records cannot be changed.
-- Concurrency: two quick fact edits produce consistent scans.
-- Browser: Admin edits a fact; Creator sees the badge and notification; Manager clears the flag with a comment.
-
-**Acceptance criteria.**
-- On a prepared set, every content item containing the changed figure or term is flagged (exact recall 100%).
-- The semantic threshold is reported with measured precision and recall on a small labelled set.
-- No Phase 4–6 record is changed.
-
-**Risks and costs.**
-- Embedding cost for each version and each Knowledge Base item (small).
-- AI re-review cost for each hit.
-- Semantic threshold tuning, and false positives.
-- Large workspaces need batching.
-- Not real-time: the scan delay will be stated.
-
----
-
-## Requirement 3 — DOCX and PowerPoint Review
-
-**Features and workflow.**
-- Creators upload a `.docx` or `.pptx` file, up to the existing size limits.
-- The browser extracts its structure:
-  - **DOCX:** paragraphs in order, with headings, tables flattened to paragraphs, and image alt text.
-  - **PPTX:** per slide, the title, body text boxes, speaker notes and image alt text.
-- As with PDFs, the Creator reviews and confirms the extracted text before saving.
-- The server checks the file's real signature (ZIP plus the expected internal parts) and registers it through the existing service-role function.
-- Checks and the AI review run on a combined text that records each block's location (paragraph N, or slide N with its part: title, body, notes or alt). Every finding is anchored to its block and an offset inside the block.
-- The review screen shows the document as paragraphs or a slide-by-slide outline, with findings and suggested edits shown in place.
-- Accept/Edit rewrites the confirmed extracted text and creates a new version, as with PDFs. The original file is kept unchanged.
-- Generating an edited .docx or .pptx file is out of scope unless you request it.
-
-**Database.**
-- Add `docx` and `pptx` to the content type and allowed file types.
-- `content_versions.blocks` (jsonb, immutable): each block's ID, kind, location and offsets.
-- `findings.block_id` (nullable): checked in the database to match the version's blocks.
-- Storage policy and registration function extended to the new types and signatures.
-
-**Backend and AI.**
-- Pure block-mapping module, with unit tests, that converts offsets between combined text and blocks.
-- The AI prompt receives block labels; the validator re-derives the block from the offsets and never trusts a block returned by the AI.
-- Alt-text accessibility check extended to images inside the documents.
-
-**Library choice (needs approval).** A browser ZIP/XML reader, such as `jszip` with custom parsing, or `mammoth` for DOCX only. No server-side native libraries (they would not run on the hosting runtime). Embedded images are not OCR'd.
-
-**UI.**
-- Upload options for Word and PowerPoint, an extraction review step, the paragraph view and slide outline, and per-block finding markers.
-
-**Security.** Same rules as Phase 3 files: private storage, Creator-only uploads into their own draft, signature checks, no overwrite. Macro-enabled files (`.docm`, `.pptm`) and encrypted files are rejected.
-
-**Dependencies.** Phase 3 upload, registration and versioning; Phase 4/5 checks and validators; Phase 6 actions and anchors.
-
-**Tests.**
-- Unit: parsing of fixture DOCX/PPTX files (paragraphs, tables, notes, alt text), block mapping and offsets with emoji.
-- Integration: a finding's block and offset reproduces the exact quote; a forged block ID is rejected.
-- Security: wrong signature, macro or encrypted file, cross-workspace upload.
-- Browser: upload each type, confirm the text, submit, see anchored findings, accept a suggestion.
-
-**Acceptance criteria.**
-- For both fixtures, every expected finding appears on the correct paragraph or slide (including notes and alt text), and accepting a suggestion produces a new version with the correct block text.
-
-**Risks.**
-- Complex layouts (SmartArt, charts, text in images) are not extracted; this will be shown to the user.
-- Very large decks increase AI cost and response time.
-
----
-
-## Implementation sequence (one sub-phase at a time, each reported for your acceptance)
-1. **7A Accuracy harness:** it measures the existing system, and its results act as the baseline for later changes.
-2. **7B DOCX/PPTX review:** adds content types that 7C must then cover.
-3. **7C Fact-change impact scan:** vector extension, chunk backfill, scans, flags, notifications.
-4. Full Phase 1–7 regression and report.
-
-## Decisions needed before starting
-1. Approve the `vector` extension and a DOCX/PPTX browser library (jszip-based parsing preferred).
-2. Approve AI cost caps for evaluation runs (for example 300 calls per run) and impact re-reviews.
-3. Decide whether flagged content may show the changed fact's wording to non-Admins, or only a neutral summary.
-4. Confirm generated .docx/.pptx output stays out of scope.
-5. Supply the Round 2 roadmap if it exists.
-
-## Technical notes
-- New tables follow the existing rules: SELECT-only access through the database API, writes through locked SECURITY DEFINER or service-role functions, immutable records, audit events, explicit grants, no anon access.
-- AI calls stay in server-only files with an injectable model caller (testable offline) and are logged to `ai_calls`. Gateway errors are handled as before: 429 back-off; 402/403 pause the job.
-- Pure logic (metrics, block mapping, matching) goes in `src/lib` with unit tests. Live tests use temporary accounts, run one after another, and are cleaned up afterwards.
+## 6. Cost, usage and risks [A: estimates]
+- **AI calls:** accuracy harness about 250–750 calls per full run depending on repeats; impact scans of 1–25 calls each; embeddings are cheap per chunk; import assistant about 1 call per document. Costs scale with the caps above.
+- **Cloud:** small extra tables. Embedding storage is minor at demo scale. Batch jobs must fit server time limits, so they run in chunks.
+- **Risks:** 72 h window with 4 workstreams (7.0 and 7A are highest priority for scoring); AI rate limits during runs; real AI over-flagging will lower the measured precision, which must be reported honestly; complex Office XML (grouped shapes, SmartArt) may be partly unsupported and must be documented; embedding model availability [A]; keeping all Phase 1–6 security unchanged.
