@@ -3,19 +3,20 @@ import type { Role } from './access';
 
 export const contentTypes = ['text', 'image', 'pdf'] as const;
 export type ContentType = (typeof contentTypes)[number];
-export const contentStatuses = ['draft', 'submitted', 'in_review', 'approved', 'rejected', 'changes_requested'] as const;
+export const contentStatuses = ['draft', 'submitted', 'checked', 'pending_manager', 'pending_reviewer', 'in_review', 'approved', 'rejected', 'changes_requested'] as const;
 export type ContentStatus = (typeof contentStatuses)[number];
 export const channels = ['Web', 'Email', 'Social', 'Print', 'Other'] as const;
 export const TEXT_LIMIT = 50_000;
 
 // Spec Part 4: Creators create/submit their own content; Managers read submitted workspace content.
-// Admin and Reviewer have no Phase 3 content access (reviewer assignment arrives in the approval phase).
+// Admin has no content access. Reviewers (Phase 6) see only items assigned to them.
 export const canCreateContent = (role: Role) => role === 'creator';
 export const canViewWorkspaceContent = (role: Role) => role === 'manager';
+export const canReviewAssigned = (role: Role) => role === 'reviewer';
 
-/** Phase 3 allows only draft→submitted; later statuses belong to the approval phase. */
-export function canTransition(from: ContentStatus, to: ContentStatus) { return from === 'draft' && to === 'submitted'; }
-export const isEditable = (status: ContentStatus) => status === 'draft';
+/** Creator submission: from a draft, or resubmitting after changes were requested. Full lifecycle lives in ./approval. */
+export function canTransition(from: ContentStatus, to: ContentStatus) { return (from === 'draft' || from === 'changes_requested') && to === 'submitted'; }
+export const isEditable = (status: ContentStatus) => status === 'draft' || status === 'changes_requested';
 
 const hex = z.string().trim().toUpperCase().regex(/^#[0-9A-F]{6}$/, 'Use a six-digit HEX colour such as #1F2A44').nullable().or(z.literal('').transform(() => null));
 export const contentFieldsSchema = z.object({
@@ -61,4 +62,4 @@ export function contentPathPattern(workspaceId: string, contentId: string) {
   return new RegExp(`^${workspaceId}/${contentId}/[0-9a-f-]{36}\\.(png|jpg|webp|pdf)$`);
 }
 
-export const statusLabel: Record<ContentStatus, string> = { draft: 'Draft', submitted: 'Submitted', in_review: 'In review', approved: 'Approved', rejected: 'Rejected', changes_requested: 'Changes requested' };
+export const statusLabel: Record<ContentStatus, string> = { draft: 'Draft', submitted: 'Checking', checked: 'Checked', pending_manager: 'Awaiting manager', pending_reviewer: 'Awaiting reviewer', in_review: 'In review', approved: 'Approved', rejected: 'Rejected', changes_requested: 'Changes requested' };

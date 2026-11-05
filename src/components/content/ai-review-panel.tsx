@@ -15,7 +15,7 @@ const verdict: Record<string, { label: string; icon: typeof AlertTriangle; varia
 };
 const box = (b: unknown) => Array.isArray(b) && b.length === 4 && b.every(n => typeof n === 'number') ? b as [number, number, number, number] : null;
 
-export function AiReviewPanel({ review, findings, deterministic, imageUrl, canRun, running, onRun, lastError }: { review: Review | null; findings: Finding[]; deterministic: Finding[]; imageUrl: string | null; canRun: boolean; running: boolean; onRun: () => void; lastError: string | null }) {
+export function AiReviewPanel({ review, findings, deterministic, imageUrl, canRun, running, onRun, lastError, renderActions }: { review: Review | null; findings: Finding[]; deterministic: Finding[]; imageUrl: string | null; canRun: boolean; running: boolean; onRun: () => void; lastError: string | null; renderActions?: (f: Finding) => React.ReactNode }) {
   if (!review) return <section className="mt-8 rounded-lg border bg-card p-6">
     <h2 className="flex items-center gap-2 text-lg font-semibold"><Sparkles className="size-4 text-primary" />AI review</h2>
     <p className="mt-1 text-sm text-muted-foreground">No AI review has been saved for the submitted version. The automatic checks above are not affected.</p>
@@ -46,6 +46,7 @@ export function AiReviewPanel({ review, findings, deterministic, imageUrl, canRu
         : <p className="mt-1 text-xs text-muted-foreground">No verified citation.</p>}
       {f.suggested_text && <p className="mt-1 text-xs"><span className="text-muted-foreground">Suggested wording: </span>{f.suggested_text}</p>}
       {also && <p className="mt-1 text-xs text-muted-foreground">Also flagged by automatic checks: {[...new Set(also.map(d => checkLabel[d.check_name] ?? d.check_name))].join(', ')}</p>}
+      {renderActions?.(f)}
     </li>; })}</ul>
   </section>;
 }

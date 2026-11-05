@@ -9,7 +9,7 @@ const checkLabel: Record<string, string> = { banned_term: 'Banned terms', termin
 const order = ['banned_term', 'terminology', 'numeric_claim', 'alt_text', 'contrast', 'palette'];
 
 /** Highlights finding spans using UTF-16 offsets into the exact checked version text. */
-function Highlighted({ text, findings }: { text: string; findings: Finding[] }) {
+export function Highlighted({ text, findings }: { text: string; findings: Finding[] }) {
   const spans = findings.filter(f => f.span_start !== null && f.span_end !== null).sort((a, b) => a.span_start! - b.span_start! || b.span_end! - a.span_end!);
   const parts: React.ReactNode[] = []; let at = 0;
   for (const f of spans) {
@@ -26,7 +26,7 @@ function Swatch({ hex }: { hex: string }) {
   return /^#[0-9A-F]{6}$/i.test(hex) ? <span aria-hidden className="inline-block size-4 rounded border align-middle" style={{ backgroundColor: hex }} /> : null;
 }
 
-export function FindingsPanel({ review, findings, text, canRun, running, onRun }: { review: Review | null; findings: Finding[]; text: string | null; canRun: boolean; running: boolean; onRun: () => void }) {
+export function FindingsPanel({ review, findings, text, canRun, running, onRun, renderActions }: { review: Review | null; findings: Finding[]; text: string | null; canRun: boolean; running: boolean; onRun: () => void; renderActions?: (f: Finding) => React.ReactNode }) {
   if (!review) return <section className="mt-8 rounded-lg border bg-card p-6"><h2 className="text-lg font-semibold">Automatic checks</h2>
     <p className="mt-1 text-sm text-muted-foreground">No automatic checks have been saved for the submitted version yet.</p>
     {canRun && <Button className="mt-4" onClick={onRun} disabled={running}>{running ? 'Checking…' : 'Run automatic checks'}</Button>}</section>;
@@ -47,6 +47,7 @@ export function FindingsPanel({ review, findings, text, canRun, running, onRun }
           {f.span_start !== null && <span className="text-xs text-muted-foreground">characters {f.span_start}–{f.span_end}</span>}</div>
         <p className="mt-1">{f.explanation}</p>
         {(f.cited_code || f.cited_passage) && <p className="mt-1 text-xs text-muted-foreground">Based on {f.cited_kind === 'rule' ? 'rule' : f.cited_kind === 'glossary' ? 'glossary term' : f.cited_kind === 'palette' ? 'palette colour' : ''} <span className="font-medium">{f.cited_code}</span>{f.cited_kind === 'palette' && <> <Swatch hex={f.cited_passage} /></>}{f.cited_passage ? ` — ${f.cited_passage}` : ''}</p>}
+        {renderActions?.(f)}
       </li>)}</ul></div>)}
   </section>;
 }

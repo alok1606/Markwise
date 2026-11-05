@@ -2,18 +2,19 @@ import { Link, Outlet, useNavigate, useLocation } from '@tanstack/react-router';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { chooseWorkspace, orderMemberships, roleLabel, workspaceStorageKey } from '@/lib/workspace-selection';
-import { Building2, ChevronDown, LayoutDashboard, Users, UserRound, Settings2, CircleHelp, LogOut, Menu, X, LockKeyhole, BookOpenCheck, Files, FilePlus2 } from 'lucide-react';
+import { Building2, ChevronDown, LayoutDashboard, Users, UserRound, Settings2, CircleHelp, LogOut, Menu, X, LockKeyhole, BookOpenCheck, Files, FilePlus2, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Brand } from './brand';
 import { accessOptions } from '@/lib/queries';
 import { roleNavigation, type Role } from '@/lib/access';
 import { supabase } from '@/integrations/supabase/client';
-const navLinks: Record<string, { to: '/knowledge' | '/users' | '/content' | '/content/new' | '/content/all'; icon: typeof Users; active: (p: string) => boolean }> = {
+const navLinks: Record<string, { to: '/knowledge' | '/users' | '/content' | '/content/new' | '/content/all' | '/review'; icon: typeof Users; active: (p: string) => boolean }> = {
   'Knowledge Base': { to: '/knowledge', icon: BookOpenCheck, active: p => p.startsWith('/knowledge') },
   Users: { to: '/users', icon: Users, active: p => p === '/users' },
   'My Content': { to: '/content', icon: Files, active: p => p === '/content' || (p.startsWith('/content/') && p !== '/content/new' && p !== '/content/all') },
   'New Content': { to: '/content/new', icon: FilePlus2, active: p => p === '/content/new' },
   'All Content': { to: '/content/all', icon: Files, active: p => p === '/content/all' },
+  'Review Queue': { to: '/review', icon: ClipboardCheck, active: p => p === '/review' },
 };
 const WorkspaceContext = createContext<{ id: string; name: string; role: Role }>({ id: '', name: '', role: 'creator' });
 export const useWorkspace = () => useContext(WorkspaceContext);

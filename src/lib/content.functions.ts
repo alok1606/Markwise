@@ -5,6 +5,7 @@ import { runChecks, type BannedRule, type ColourSample, type GlossaryEntry } fro
 import { executeAiReview, AiReviewError } from './ai-review.server';
 import { checkContentFile, contentFieldsSchema, contentPathPattern, contentTypes, fieldsForType, type ContentType } from './content';
 
+export type RouteFacts = { version: number; version_id: string; status: string; ai_state: 'completed' | 'failed' | 'pending'; blocking: number; route: 'manager' | 'reviewer' };
 type Ctx = { supabase: any; userId: string }; // eslint-disable-line @typescript-eslint/no-explicit-any
 const ws = z.object({ workspace_id: z.string().uuid() });
 const idInput = ws.extend({ id: z.string().uuid() });
@@ -14,8 +15,8 @@ async function requireRole(ctx: Ctx, workspaceId: string, role: 'creator' | 'man
   if (error || !data) throw new Error(message);
 }
 async function contentRole(ctx: Ctx, workspaceId: string) {
-  const [c, m] = await Promise.all(['creator', 'manager'].map(r => ctx.supabase.rpc('has_role', { _user_id: ctx.userId, _role: r, _workspace_id: workspaceId })));
-  if (c?.data) return 'creator'; if (m?.data) return 'manager';
+  const [c, m, rv] = await Promise.all(['creator', 'manager', 'reviewer'].map(r => ctx.supabase.rpc('has_role', { _user_id: ctx.userId, _role: r, _workspace_id: workspaceId })));
+  if (c?.data) return 'creator'; if (m?.data) return 'manager'; if (rv?.data) return 'reviewer';
   throw new Error('You do not have access to content in this workspace');
 }
 function fail(error: { message: string } | null) { if (error) throw new Error(error.message); }
@@ -57,7 +58,20 @@ export const getContent = createServerFn({ method: 'GET' }).middleware([requireS
   fail(reviews.error);
   const findings = reviews.data?.length ? await context.supabase.from('findings').select('id,review_id,source,check_name,category,severity,confidence,span_start,span_end,quoted_text,explanation,cited_kind,cited_code,cited_passage,outcome,suggested_text,evidence_kind,bbox').eq('content_id', c.id).order('span_start', { ascending: true, nullsFirst: true }) : { data: [], error: null };
   fail(findings.error);
-  return { content: c, versions: versions.data ?? [], reviews: reviews.data ?? [], findings: findings.data ?? [], file_url, owner_name: owner.data?.full_name || owner.data?.email || 'Workspace member', is_owner: c.owner_id === context.userId && role === 'creator' };
+  // Phase 6 records, read as the caller under RLS.
+  const [actions, approvals, comments, facts] = await Promise.all([
+    context.supabase.from('finding_actions').select('id,finding_id,version_id,action,reason,final_text,result_version_id,actor_id,created_at').eq('content_id', c.id).order('created_at'),
+    context.supabase.from('approvals').select('id,version_id,version_number,route,reviewer_id,assigned_by,ai_state_at_routing,status,decision_comment,decided_by,decided_at,created_at').eq('content_id', c.id).order('created_at'),
+    context.supabase.from('comments').select('id,parent_id,author_id,message,created_at').eq('content_id', c.id).order('created_at'),
+    c.status === 'draft' ? Promise.resolve({ data: null, error: null }) : context.supabase.rpc('approval_route_facts', { _content_id: c.id }),
+  ]);
+  fail(actions.error); fail(approvals.error); fail(comments.error);
+  const people = new Set<string>([...(actions.data ?? []).map((a: { actor_id: string }) => a.actor_id), ...(approvals.data ?? []).flatMap((a: { reviewer_id: string | null; decided_by: string | null; assigned_by: string }) => [a.reviewer_id, a.decided_by, a.assigned_by]), ...(comments.data ?? []).map((x: { author_id: string }) => x.author_id)].filter(Boolean) as string[]);
+  const names: Record<string, string> = {};
+  if (people.size) { const p = await context.supabase.from('profiles').select('id,full_name,email').in('id', [...people]); for (const x of p.data ?? []) names[x.id] = x.full_name || x.email; }
+  return { content: c, versions: versions.data ?? [], reviews: reviews.data ?? [], findings: findings.data ?? [], file_url, owner_name: owner.data?.full_name || owner.data?.email || 'Workspace member',
+    is_owner: c.owner_id === context.userId && role === 'creator', role, user_id: context.userId,
+    actions: actions.data ?? [], approvals: approvals.data ?? [], comments: comments.data ?? [], route_facts: (facts.data ?? null) as RouteFacts | null, names };
 });
 
 export const getVersionFileUrl = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(idInput.extend({ version_id: z.string().uuid() })).handler(async ({ data, context }) => {
@@ -89,7 +103,7 @@ export const saveContentDraft = createServerFn({ method: 'POST' }).middleware([r
 // Browser-read image colours are an untrusted sample: strictly shaped, and only ever used by the palette check.
 const imageSample = { colour_samples: z.array(z.object({ hex: z.string().regex(/^#[0-9A-F]{6}$/), share: z.number().min(0).max(1) })).max(8).nullable().default(null), image_error: z.string().max(200).nullable().default(null) };
 
-async function executeChecks(ctx: Ctx, workspaceId: string, contentId: string, samples: ColourSample[] | null, imageError: string | null) {
+export async function executeChecks(ctx: Ctx, workspaceId: string, contentId: string, samples: ColourSample[] | null, imageError: string | null) {
   // Every read here runs as the caller, so RLS confirms ownership before any privileged step.
   const row = await ctx.supabase.from('contents').select('id,owner_id,status,version,type').eq('id', contentId).eq('workspace_id', workspaceId).maybeSingle();
   if (row.error || !row.data || row.data.owner_id !== ctx.userId) throw new Error('Content not found in this workspace');
@@ -128,7 +142,7 @@ export const submitContent = createServerFn({ method: 'POST' }).middleware([requ
   return { checks, check_error, ai, ai_error };
 });
 
-async function aiReview(ctx: Ctx, workspaceId: string, contentId: string) {
+export async function aiReview(ctx: Ctx, workspaceId: string, contentId: string) {
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
   return executeAiReview({ caller: ctx.supabase, admin: supabaseAdmin as never, userId: ctx.userId, workspaceId, contentId });
 }
@@ -156,7 +170,7 @@ export const registerContentFile = createServerFn({ method: 'POST' }).middleware
   // Read the content as the caller (RLS) to confirm ownership before any privileged step.
   const row = await context.supabase.from('contents').select('id,type,status,owner_id').eq('id', data.id).eq('workspace_id', data.workspace_id).maybeSingle();
   if (row.error || !row.data || row.data.owner_id !== context.userId) throw new Error('Content not found in this workspace');
-  if (row.data.status !== 'draft') throw new Error('Submitted content cannot be edited');
+  if (row.data.status !== 'draft' && row.data.status !== 'changes_requested') throw new Error('Submitted content cannot be edited');
   if (row.data.type === 'text') throw new Error('Text content has no file');
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
   const discard = async () => { await supabaseAdmin.storage.from('content-files').remove([data.path]); };
