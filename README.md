@@ -1,30 +1,134 @@
 # Markwise
 
-Create a new full-stack SaaS application named Markwise.
+Markwise is a brand-compliance review tool built for **CodeNexus India 2026**. Teams write marketing content (text, images, PDFs), Markwise checks it against the workspace's own brand rules, approved facts, glossary and legal wording, and then routes it through a human approval workflow. Humans keep final control: Markwise never approves, edits or publishes content on its own, and it never invents metrics or citations.
 
-Use React, Vite, TypeScript, Tailwind CSS and shadcn/ui.
+**Problem it solves:** marketing copy often ships with unapproved claims ("60% faster, guaranteed!"), banned legal terms or off-brand tone. Checking this by hand is slow and inconsistent. Markwise flags these issues with a cited source for every finding, and records who approved what and when.
 
-Do not build any features yet. I will provide the complete
+---
 
-project specification and development phases separately.
+## 1. Main features (implemented, Phases 1–6)
 
-This project was built with [Lovable](https://lovable.dev).
+- **Accounts and workspaces** – email/password sign-up with email verification, password reset, Google sign-in, private profile photos, one workspace per new sign-up.
+- **Knowledge base (Admin only)** – brand rules, approved facts (with approval and history), glossary, legal wording, tone guidance, reference files, and a one-click Nimbus Onboard demo knowledge set.
+- **Content** – create text, image and PDF content; every save creates a new immutable version; server-assigned version numbers; stale-edit protection; submitted content is locked.
+- **Automatic checks** – six deterministic checks (e.g. banned terms, avoided glossary terms, unverified numbers, image colours) run on the exact submitted version.
+- **AI review** – a separate AI review whose output is validated before being shown (see section 6).
+- **Review actions and approval** – accept suggestion, edit, or dismiss with a reason; send for approval; automatic routing to a Reviewer when risky findings remain; Manager/Reviewer decisions (approve, request changes, reject); comments; full history.
+- **Review queue, role dashboards and a public `/demo` walkthrough page.**
 
-## Build with Lovable
+## 2. User roles and permissions
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/8982b849-f66f-4171-b474-a56562b15b05).
+| Role | Can do | Cannot do |
+|---|---|---|
+| **Admin** | Manage users/roles and the knowledge base | Open or decide on content (by design) |
+| **Manager** | Read submitted content in the workspace, decide on items routed to Managers | Edit content; access knowledge base |
+| **Reviewer** | Decide on items assigned to them in the review queue | Edit content; access knowledge base; see unassigned items |
+| **Creator** | Create, edit, submit and act on findings for their own content | See other creators' content; access knowledge base; approve their own work |
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+All of this is enforced in the database and on the server, not only in the interface. Workspaces are fully isolated from each other.
 
-## Development
+## 3. Technology stack
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+- React 19, Vite 7, TypeScript
+- TanStack Router and TanStack Start (server functions for all app-internal server logic)
+- Tailwind CSS v4 and shadcn/ui
+- Lovable Cloud: database (Postgres with row-level security), authentication, private file storage, server functions
+- Lovable AI Gateway, model `google/gemini-3-flash-preview` (set in `src/lib/ai-gateway.server.ts`)
+- Vitest + Testing Library for tests; Playwright for browser acceptance runs
+
+> Note: the original specification mentioned React Router and Edge Functions. The implemented app uses TanStack Router/Start server functions instead.
+
+## 4. Architecture and request flow
+
+```text
+Browser (React + TanStack Router)
+   │  signed-in request with bearer token
+   ▼
+TanStack Start server functions  (*.functions.ts, auth middleware)
+   │  RLS applies as the signed-in user
+   ▼
+Lovable Cloud database ── SECURITY DEFINER functions for every write
+   │                       (lock row, assign version, write audit event)
+   ├─ private storage (content files, knowledge files, avatars)
+   └─ AI calls only from *.server.ts → Lovable AI Gateway
+```
+
+Typical flow: Creator saves a version → submits → server runs automatic checks on that exact version and records them atomically → AI review runs and is validated/recorded separately → Creator acts on findings → sends for approval → database function routes to Manager or Reviewer → decision recorded immutably.
+
+## 5. Database and workspace isolation
+
+- Membership and roles are stored separately from profiles; roles are never taken from user-editable data.
+- Every table has row-level security scoped to the workspace and role. Signed-out visitors have no access to private tables.
+- Content tables are read-only through the data API; writes go only through database functions that check authorization and write audit events.
+- Versions, reviews, findings, approvals, finding actions and comments are immutable.
+- Files are stored privately under workspace/user paths; the server checks real file type and size (magic bytes) before registering them; display uses temporary signed links.
+
+## 6. AI review, citation validation and `cannot_verify`
+
+- AI output is treated as untrusted. The server recomputes quote positions, re-checks every citation against the knowledge-base sources actually sent to the model, and downgrades any unproven claim to **`cannot_verify`**.
+- AI findings are stored separately from automatic findings and can never change them. One AI review per version.
+- A failed AI call does not undo a submission. Every AI call attempt is logged (content-free summary) in an Admin-readable log table.
+- A `cannot_verify` finding means "Markwise could not prove this from your knowledge base" – it is never shown as verified.
+
+## 7. Local development
+
+Requirements: Node.js 20+ and npm (or Bun).
 
 ```sh
 git clone <this-repository-url>
-cd <repository-name>
-npm i
+cd <repository-folder>
+npm install
 npm run dev
 ```
+
+The app connects to its Lovable Cloud backend; the database structure is managed through Lovable.
+
+## 8. Environment variables (names only)
+
+Browser: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`
+Server: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (managed by Lovable Cloud, not user-accessible), `LOVABLE_API_KEY` (AI Gateway, managed)
+Live tests only: `MARKWISE_CONTENT_FIXTURE` and similar fixture paths
+
+Never commit real values.
+
+## 9. Testing
+
+```sh
+npm test
+```
+
+- **Unit/component tests** (`src/test/*.test.ts(x)` without `-live`) – checks, AI validation, approval logic, access rules, routing, auth forms, workspace selection. Run everywhere.
+- **Live security tests** (`*-live.test.ts`, `database-security.test.ts`) – create temporary accounts in two workspaces and test row-level security, storage and cross-workspace isolation against the real backend, then clean up.
+- **Browser acceptance tests** – Playwright runs performed during development (e.g. PDF checking, the full Creator → Reviewer → Manager flow, the Nimbus demo). Evidence is in `docs/` (see `docs/Nimbus_Demo_E2E_Report.md`). These scripts are not part of `npm test`.
+
+**Skipped tests, honestly:** the live tests are written with `describe.skipIf(...)` and are **skipped automatically** when the fixture file or backend keys are not present – which is the case on a normal clone, because the service key is not available outside the managed environment. A run that reports them as skipped has **not** tested security; they were run with fixtures during each phase's acceptance (results in the `docs/Phase_*` reports).
+
+## 10. Deployment
+
+- **Lovable publishing (supported):** use Publish in the Lovable editor. Frontend and server functions are deployed together with the Lovable Cloud backend.
+- **Vercel:** **not verified.** The app relies on TanStack Start server functions targeting an edge worker runtime, so a frontend-only Vercel deployment would not run the server logic. No Vercel deployment has been tested.
+
+## 11. Known limitations and unfinished features
+
+- **Insights dashboard** – not built (menu link removed).
+- **Guideline import assistant** – not built.
+- **Reviewer sees "Workspace member"** instead of the creator's name – deliberate, to avoid widening profile privacy.
+- **Knowledge-base wording appears in citations** shown to Creators, Managers and Reviewers on findings (see note below).
+- Automatic check may still mark a number as "needs checking" even when the AI review confirms it from an approved fact (the two reviews are independent by design).
+- AI results can vary between runs.
+- Live security tests are skipped without fixtures (section 9).
+- Vercel deployment not verified.
+
+**Citation visibility note:** findings store the cited rule/fact passage with the finding so the Creator can see *why* something was flagged. As a result, the cited knowledge-base wording is visible to anyone who can read that content, even though the knowledge base pages themselves are Admin-only. Only the cited passage is shown, not the full knowledge base. This is under owner review.
+
+## 12. AI and no-code tool disclosure
+
+Markwise was built with **Lovable** (AI-assisted app builder), which generated and edited most of the code under the team's direction and review. The running app uses the **Lovable AI Gateway** (Google Gemini model) for AI review. All phases were specified, reviewed and accepted by the team.
+
+## 13. Round 3 planned improvements (PLANNED – not implemented)
+
+1. Accuracy harness – measured precision/recall of findings on a labelled test set.
+2. DOCX and PPTX content support.
+3. Impact scan – find already-approved content affected when a rule or fact changes.
+
+Plus gap closure (Insights, import assistant) and hardening. See `docs/Phase_7_Plan.md`.
