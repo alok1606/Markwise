@@ -80,3 +80,6 @@
 - [x] Final plan corrections: 240/300 call estimate, resolved 72-hour schedule and fallbacks
 - [ ] Implementation blocked until owner confirms the official Round 3 window and exact deadline
 - [x] Phase 7 plan approved as final baseline (docs/Phase_7_Plan.md); Project_Status updated
+
+## Round 2 polish (requested 5 Nov 2026)
+- [ ] Plan for dashboard text, reviewer name, demo, README, live check, Activity, AI-call log, AI page; awaiting owner approval
