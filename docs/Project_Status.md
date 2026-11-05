@@ -8,6 +8,7 @@
 | 3 | Content creation and submission (Text/Image/PDF, immutable versions) | COMPLETE |
 | 4 | Deterministic checking engine | COMPLETE |
 | 5 | AI review engine | COMPLETE (2026-11-05 13:54 UTC) |
+| 6 | Review actions and approval workflow | Implemented, pending owner acceptance (see Phase_6_Progress_Report.md) |
 
 ## Latest test evidence (Phase 5)
 - Unit: 20 passed. Live security/integrity/failure: 6 passed.
@@ -30,4 +31,4 @@ Other:
 - Custom email sender domain and branded templates not configured (not a blocker).
 
 ## Next phase
-Phase 6 — Review Screen Actions and Approval Workflow (Spec Parts 7.H and 7.I). Plan prepared; awaiting owner approval. Not started.
+Phase 6 implemented and awaiting acceptance. Phase 7 not started.

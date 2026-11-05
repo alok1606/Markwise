@@ -61,9 +61,9 @@
 - [x] Plan revised with owner clarifications (2026-11-05 14:01 UTC)
 - [x] Final amendments applied (AI gating, shared findings FK, terminal reject, safe backfill)
 - [x] Owner approved Phase 6 plan (2026-11-05 14:07 UTC) with clarifications: recoverable Run AI review for missing AI state, Phase 5 retry rules, Manager sees changes_requested read-only
-- [ ] Phase 6: migration (statuses, AI state, finding actions, approvals, comments, functions, backfill)
-- [ ] Phase 6: pure modules + unit tests
-- [ ] Phase 6: server functions + rechecking
-- [ ] Phase 6: UI (review screen, dialogs, queue, decisions, comments, timeline)
-- [ ] Phase 6: security, concurrency, browser E2E, full regression, progress report
+- [x] Phase 6: migration (statuses, AI state, finding actions, approvals, comments, functions, backfill)
+- [x] Phase 6: pure modules + unit tests
+- [x] Phase 6: server functions + rechecking
+- [x] Phase 6: UI (review screen, dialogs, queue, decisions, comments, timeline)
+- [x] Phase 6: security, concurrency, browser E2E, full regression, progress report
 - [ ] Phase 6 owner acceptance
