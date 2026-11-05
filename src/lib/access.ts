@@ -7,7 +7,7 @@ export const profileSchema = z.object({ full_name: z.string().trim().min(1, 'Ent
 export const credentialsSchema = z.object({ email: z.string().trim().email('Enter a valid email'), password: z.string().min(8, 'Use at least 8 characters') });
 export function canManageUsers(role: Role) { return role === 'admin'; }
 export const roleNavigation: Record<Role, string[]> = {
-  creator: ['My Content', 'New Content'], manager: ['All Content'], reviewer: ['Review Queue'], admin: ['Knowledge Base', 'Users'],
+  creator: ['My Content', 'New Content'], manager: ['All Content'], reviewer: ['Review Queue'], admin: ['Knowledge Base', 'Users', 'AI Calls'],
 };
 export function meta(title: string, description: string) {
   return { meta: [{ title: `${title} · Markwise` }, { name: 'description', content: description }, { property: 'og:title', content: `${title} · Markwise` }, { property: 'og:description', content: description }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' }] };

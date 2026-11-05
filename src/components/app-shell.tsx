@@ -2,13 +2,14 @@ import { Link, Outlet, useNavigate, useLocation } from '@tanstack/react-router';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { chooseWorkspace, orderMemberships, roleLabel, workspaceStorageKey } from '@/lib/workspace-selection';
-import { Building2, ChevronDown, LayoutDashboard, Users, UserRound, Settings2, CircleHelp, LogOut, Menu, X, LockKeyhole, BookOpenCheck, Files, FilePlus2, ClipboardCheck } from 'lucide-react';
+import { Building2, ChevronDown, LayoutDashboard, Users, UserRound, Settings2, CircleHelp, LogOut, Menu, X, LockKeyhole, BookOpenCheck, Files, FilePlus2, ClipboardCheck, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Brand } from './brand';
 import { accessOptions } from '@/lib/queries';
 import { roleNavigation, type Role } from '@/lib/access';
 import { supabase } from '@/integrations/supabase/client';
-const navLinks: Record<string, { to: '/knowledge' | '/users' | '/content' | '/content/new' | '/content/all' | '/review'; icon: typeof Users; active: (p: string) => boolean }> = {
+const navLinks: Record<string, { to: '/knowledge' | '/users' | '/content' | '/content/new' | '/content/all' | '/review' | '/ai-calls'; icon: typeof Users; active: (p: string) => boolean }> = {
+  'AI Calls': { to: '/ai-calls', icon: Bot, active: p => p === '/ai-calls' },
   'Knowledge Base': { to: '/knowledge', icon: BookOpenCheck, active: p => p.startsWith('/knowledge') },
   Users: { to: '/users', icon: Users, active: p => p === '/users' },
   'My Content': { to: '/content', icon: Files, active: p => p === '/content' || (p.startsWith('/content/') && p !== '/content/new' && p !== '/content/all') },
