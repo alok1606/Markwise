@@ -37,4 +37,4 @@ Other:
 - Spec items not yet scheduled: Insights dashboard (7.J), AI transparency page (7.K), guideline import assistant (7.D), demo data (7.L), mandatory end-to-end test (7.M), GitHub/Vercel docs (Part 10).
 
 ## Next phase
-Phase 7 plan awaiting owner approval. No Phase 7 work has started.
+Phases 1–6 accepted by owner. Phase 7 (Round 3) PLANNED, NOT IMPLEMENTED: final planning baseline approved 5 Nov 2026 15:42 UTC, saved in docs/Phase_7_Plan.md. It covers 7.0 → 7A accuracy harness → 7B DOCX/PPTX → 7C fact-change impact scan → 7D, each with its own approval gate; three mandatory commitments with full acceptance criteria; 300-call accuracy cap; 25-re-review impact batch cap; neutral non-Admin reasons; 72-hour schedule with fallbacks. Implementation waits for owner instruction after the official Round 3 window and deadline are confirmed.
