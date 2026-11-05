@@ -24,7 +24,7 @@ export async function executeAiReview(deps: { caller: SupabaseClient; admin: Sup
   const callModel = deps.callModel ?? callGatewayModel;
   const row = await caller.from('contents').select('id,owner_id,status,version,type').eq('id', contentId).eq('workspace_id', workspaceId).maybeSingle();
   if (row.error || !row.data || row.data.owner_id !== userId) throw new Error('Content not found in this workspace');
-  if (row.data.status !== 'submitted' && row.data.status !== 'checked') throw new Error('AI review is closed for this content');
+  if (row.data.status !== 'submitted' && row.data.status !== 'checked') throw new Error('AI review runs only on submitted or checked content');
   const ver = await caller.from('content_versions').select('id,version_number,body_text,file_path,file_mime').eq('content_id', contentId).eq('version_number', row.data.version).maybeSingle();
   if (ver.error || !ver.data) throw new Error('Submitted version not found');
   const v = ver.data;

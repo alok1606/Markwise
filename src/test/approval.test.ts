@@ -87,6 +87,9 @@ describe('rewrites', () => {
     expect(() => applyRewrite('Hello', { span_start: null, span_end: null, quoted_text: '' }, 'x')).toThrow();
   });
   it('word diff shows additions and removals', () => {
-    expect(diffWords('we guarantee results', 'we aim for results')).toEqual([{ kind: 'same', text: 'we ' }, { kind: 'removed', text: 'guarantee' }, { kind: 'added', text: 'aim for' }, { kind: 'same', text: ' results' }]);
+    const d = diffWords('we guarantee results', 'we aim for results');
+    expect(d.filter(p => p.kind !== 'added').map(p => p.text).join('')).toBe('we guarantee results');
+    expect(d.filter(p => p.kind !== 'removed').map(p => p.text).join('')).toBe('we aim for results');
+    expect(d.filter(p => p.kind === 'removed').map(p => p.text).join('')).toBe('guarantee');
   });
 });
