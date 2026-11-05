@@ -58,4 +58,5 @@
 
 ## Phase 6
 - [x] Implementation plan prepared
+- [x] Plan revised with owner clarifications (2026-11-05 14:01 UTC)
 - [ ] Owner approval of Phase 6 plan (waiting; do not start)
