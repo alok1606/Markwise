@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as HowAiWorksRouteImport } from './routes/how-ai-works'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedAiCallsRouteImport } from './routes/_authenticated/ai-calls'
@@ -58,6 +59,11 @@ const DemoRoute = DemoRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowAiWorksRoute = HowAiWorksRouteImport.update({
+  id: '/how-ai-works',
+  path: '/how-ai-works',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/demo': typeof DemoRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/how-ai-works': typeof HowAiWorksRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/ai-calls': typeof AuthenticatedAiCallsRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/demo': typeof DemoRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/how-ai-works': typeof HowAiWorksRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/ai-calls': typeof AuthenticatedAiCallsRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/demo': typeof DemoRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/how-ai-works': typeof HowAiWorksRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authenticated/ai-calls': typeof AuthenticatedAiCallsRoute
@@ -263,6 +272,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/demo'
     | '/forgot-password'
+    | '/how-ai-works'
     | '/reset-password'
     | '/signup'
     | '/ai-calls'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/demo'
     | '/forgot-password'
+    | '/how-ai-works'
     | '/reset-password'
     | '/signup'
     | '/ai-calls'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/demo'
     | '/forgot-password'
+    | '/how-ai-works'
     | '/reset-password'
     | '/signup'
     | '/_authenticated/ai-calls'
@@ -346,6 +358,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DemoRoute: typeof DemoRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  HowAiWorksRoute: typeof HowAiWorksRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
 }
@@ -385,6 +398,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-ai-works': {
+      id: '/how-ai-works'
+      path: '/how-ai-works'
+      fullPath: '/how-ai-works'
+      preLoaderRoute: typeof HowAiWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -603,6 +623,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DemoRoute: DemoRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  HowAiWorksRoute: HowAiWorksRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
 }
