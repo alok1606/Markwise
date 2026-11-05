@@ -87,3 +87,10 @@
 - [ ] Remaining: README, demo, README, live check, Activity, AI-call log, AI page; awaiting owner approval
 - [x] Owner approved tasks 1, 1b, 3, 4, 5, 6, 7, 8, 9; task 2 only if privacy-safe without changing rules
 - [x] Hackathon name confirmed: CodeNexus India 2026
+
+## Judge Demo Access (CodeNexus India 2026, approved and built 5 Nov 2026)
+- [x] Four judge accounts (creator/manager/reviewer/admin) + isolated "Judge Demo — Nimbus Onboard" workspace
+- [x] Nimbus demo KB loaded; 9 content items seeded through the real pipeline (draft, checked, pending reviewer, pending manager, approved, changes_requested, rejected, image) — 13 reviews, 30 findings, 5 approvals, 8 AI calls all succeeded
+- [x] Verified on production: all four roles sign in; reviewer queue, manager list, admin KB, creator findings all render; judge-creator reads 0 rows from team workspace
+- [x] docs/Judge_Demo_Guide.md written (no passwords); credentials delivered to owner via Files only
+- [ ] After judging: rotate passwords or delete the four accounts; reset via purge_workspace_content + load_demo_knowledge (owner action)
