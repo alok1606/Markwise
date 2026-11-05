@@ -99,3 +99,8 @@ A successful build or type check is not treated as security evidence; all checks
 - The server-function check is a one-off script run, not part of the saved automated suite.
 
 Decision: Phase 2 security verification PASSED. Phase 2 awaits owner acceptance. Phase 1 deferred items unchanged. Phase 3 not started.
+
+## Owner approval 2026-11-05 12:12 UTC
+Phase 2 — Brand Knowledge Base: COMPLETE (approved by the project owner).
+Carried-over items remain open and are not marked passed: Phase 1 one-hour session persistence (deferred) and 11 skipped Phase 1 live tests.
+Phase 3: ON HOLD until the owner explicitly says go.
