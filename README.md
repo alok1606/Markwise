@@ -4,6 +4,8 @@ Markwise is a brand-compliance review tool built for **CodeNexus India 2026**. T
 
 **Problem it solves:** marketing copy often ships with unapproved claims ("60% faster, guaranteed!"), banned legal terms or off-brand tone. Checking this by hand is slow and inconsistent. Markwise flags these issues with a cited source for every finding, and records who approved what and when.
 
+Markwise is a **team-designed and team-directed software engineering project** – see section 12 for full attribution.
+
 ---
 
 ## 1. Main features (implemented, Phases 1–6)
@@ -121,9 +123,16 @@ npm test
 
 **Citation visibility note:** findings store the cited rule/fact passage with the finding so the Creator can see *why* something was flagged. As a result, the cited knowledge-base wording is visible to anyone who can read that content, even though the knowledge base pages themselves are Admin-only. Only the cited passage is shown, not the full knowledge base. This is under owner review.
 
-## 12. AI and no-code tool disclosure
+## 12. Project attribution and AI/tool disclosure
 
-Markwise was built with **Lovable** (AI-assisted app builder), which generated and edited most of the code under the team's direction and review. The running app uses the **Lovable AI Gateway** (Google Gemini model) for AI review. All phases were specified, reviewed and accepted by the team.
+Markwise is a team-designed and team-directed software engineering project. The team defined its architecture, requirements, data model, security policies and workflows, and directed, reviewed and validated implementation. Lovable-assisted development tools were used during implementation, while Lovable Cloud provides the managed production infrastructure and hosting. AI-powered brand reviews use Google's Gemini model through the Lovable AI Gateway.
+
+In detail:
+
+- **Team responsibilities** – product design, requirements, architecture, database and security design (including the row-level security model and the server-enforced approval workflow), workflow engineering, implementation direction, code review, testing and validation. Every phase was specified, reviewed and formally accepted by the team before the next began.
+- **Development tooling** – Lovable was used as an AI-assisted development environment during implementation. The team did not manually write every line of code, and Lovable was not used only for hosting.
+- **Infrastructure** – Lovable Cloud provides production hosting and the managed backend: authentication, the PostgreSQL database, private file storage and server functions.
+- **AI integration** – the Lovable AI Gateway provides access to Google's Gemini model (`google/gemini-3-flash-preview`) for AI-powered reviews. All AI output is validated server-side before being shown (section 6).
 
 ## 13. Round 3 planned improvements (PLANNED – not implemented)
 

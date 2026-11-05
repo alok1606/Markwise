@@ -54,7 +54,7 @@ Event: CodeNexus India 2026. Assessment only; no application code, database, per
 Full Creator → Reviewer flow on "We cut onboarding time by 60%, guaranteed!": LEGAL-03 and FACT-014 cited, suggestion accepted, three versions kept, Reviewer approval, cross-role/workspace access denied. Evidence in `docs/evidence/nimbus-demo/`. AI wording varies between runs.
 
 ### Documentation
-README (13 sections incl. AI/no-code disclosure and honest skipped-test note), phase reports 1–6, Project_Status, Phase_7_Plan (planned, not implemented), demo and live-check reports, evidence folders (nimbus-demo, live-check, ai-call-log, ai-page).
+README (13 sections incl. project attribution and AI/tool disclosure, and honest skipped-test note), phase reports 1–6, Project_Status, Phase_7_Plan (planned, not implemented), demo and live-check reports, evidence folders (nimbus-demo, live-check, ai-call-log, ai-page).
 
 ### Test results (latest full suite, 5 Nov 2026 16:46 UTC)
 | Passed | Failed | Skipped |
