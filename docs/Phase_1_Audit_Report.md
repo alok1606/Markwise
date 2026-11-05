@@ -250,3 +250,14 @@ No working application features, schema, RLS, roles, provider settings or admini
 - Owner-reported live checks: Manager, Reviewer, Creator logins and role labels/navigation correct.
 - Auth logs (7 days): no signup-confirmation, password-recovery, verify or logout events recorded; email delivery not evidenced in this window.
 - Decision: PENDING. Blockers: non-admin /users denial and cross-workspace denial not exercised live as those accounts in this audit; real-login session refresh unverified; fresh signup-confirmation and reset-email receipt unverified; live DB tests skipped.
+
+## User-performed live checks (reported by owner, 2026-11-05 11:09 UTC)
+These are manual checks performed by the owner, not automated tests.
+- Admin can access /users.
+- Manager, Reviewer and Creator are blocked from /users and see "Administrator access required".
+- Manager, Reviewer and Creator log in successfully and see their correct role-specific dashboards and navigation.
+- Manager workspace selection and role display verified after the workspace-selection fix.
+- Reviewer workspace and role display verified.
+- Creator workspace and role display verified.
+
+Status: Phase 1 remains PENDING. Remaining blockers: normal-login session refresh; fresh signup-confirmation email delivery and redemption; fresh password-reset email delivery and completion. Live database tests remain skipped without a controlled fixture file. Phase 2 not started.
