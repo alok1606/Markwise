@@ -1,6 +1,6 @@
 # Phase 4 — Deterministic Checking Engine: progress report (2026-11-05)
 
-Status: **PENDING owner acceptance.** Not marked complete. No AI review, approval decisions, comments, reviewer assignment or Insights were built.
+Status: **COMPLETE — approved by the owner on 2026-11-05 (13:17 UTC).** No AI review, approval decisions, comments, reviewer assignment or Insights were built.
 
 ## Implemented
 - Six independent pure checks in `src/lib/checks.ts` (no AI, no I/O): banned terms, terminology, numeric claims, image alt text, WCAG contrast, CIE76 palette.
@@ -56,6 +56,14 @@ Seven fresh temporary accounts across two workspaces (Admin, Manager, Reviewer, 
 - Direct data requests: only Creator and Manager could read the review (1) and findings (3) and download the PDF; Admin, Reviewer, second Creator, workspace B Admin and Creator got 0 rows and file denied; insert and delete refused for all 7 roles; signed-out access refused.
 - Regression suite with the temporary accounts: 172 passed, 0 failed, 22 skipped (the Phase 1 live suites using a separate account file and the 3 profile tests needing a session file were not set up for this run; they passed in the earlier Phase 4 run).
 - Cleanup: all temporary accounts, workspaces, content, findings and files deleted; verified 0 left.
+
+## Owner acceptance (2026-11-05 13:17 UTC)
+The owner approved Phase 4 as complete on the basis of the evidence above, including the PDF acceptance test: browser-side PDF text extraction; explicit Creator confirmation before saving; submission as version 3; three correctly saved findings; exact offsets and linkage to the submitted version; `cannot_verify` for the numeric claim; Creator and same-workspace Manager visibility; denial for Reviewer, Admin and other-workspace accounts; findings immutable (insert/delete refused for every role) and signed-out access refused; temporary test data cleanup confirmed.
+
+Regression reports preserved, both as actually run:
+- Earlier Phase 4 run: 191 passed, 0 failed, 3 skipped.
+- Latest PDF run: 172 passed, 0 failed, 22 skipped.
+Skipped tests were not executed in those runs and are not counted as passed.
 
 ## Not verified / open
 - PDF browser acceptance: completed and passed (see above).

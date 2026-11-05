@@ -47,4 +47,8 @@
 - [x] Phase 4: reviews/findings schema, atomic server run, duplicate prevention
 - [x] Phase 4: findings UI on content detail + counts
 - [x] Phase 4: live security tests, end-to-end flow, regression, report
-- [ ] Phase 4 owner acceptance (waiting)
+- [x] Phase 4 PDF browser acceptance test
+- [x] Phase 4 owner acceptance (2026-11-05 13:17 UTC) — COMPLETE
+
+## Phase 5
+- [ ] Phase 5 plan approval (waiting on owner; do not start)

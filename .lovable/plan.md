@@ -1,58 +1,66 @@
-# Phase 4 — Deterministic Checking Engine (plan for approval)
+# Phase 5 — AI Review Engine (plan for approval)
 
-Source: Master Specification Part 7 F (Deterministic checking engine) and Part 5 (reviews, findings). The specification has no numbered phase list; this plan treats Phase 4 as the non-AI checks that run on submitted content, as anticipated in the Phase 3 plan. If your Round 2 build plan defines Phase 4 differently, send it and this plan will be adjusted.
+Source: Master Specification Part 7 G (AI review engine), Part 5 (`findings`, `ai_calls`), Part 3 (AI). Nothing here is built until you approve.
 
-## What users get
-- When a Creator submits content, Markwise runs automatic checks on that exact version and saves the results as findings.
-- Creator sees the findings on their own submitted content; Manager sees findings for submitted content in their workspace (read-only).
-- Each finding shows: what was found, the exact quoted text and its position, severity, and the rule, glossary entry or measurement it is based on.
-- No AI, no approve/reject, no editing of findings, no reviewer assignment in this phase.
+## What it does
+After a Creator submits content and the automatic checks run, Markwise sends that exact version to the AI, together with only the workspace's approved, active rules, facts and glossary. The AI returns structured findings. Every finding is checked by the server before it is saved; anything that can't be proven against the workspace's own sources is downgraded to "Needs checking" with no citation. Results appear in the existing "Automatic checks" area as a separate "AI review" section, clearly labelled as AI.
 
-## The six checks (pure functions, no AI)
-1. Banned terms: every active banned-term rule; case-insensitive, whole-word where appropriate; every occurrence with exact start/end and quoted text; cites the rule code and description.
-2. Terminology: every glossary entry; flags avoided terms (respecting case sensitivity) and cites the preferred term.
-3. Numeric claims: extracts percentages and numbers with units; outcome "cannot_verify", explanation "Figure needs checking against approved facts." Provisional — for the later AI review.
-4. Image accessibility: flags missing alt text.
-5. Contrast: when text and background colours are given, calculates WCAG ratio, flags below 4.5:1, shows the actual ratio.
-6. Palette: reads image colours in the browser (canvas) and compares them with approved palette colours using CIE76 Delta E; flags colours further than 25 from every palette colour. If the image cannot be read, records a "could not check" limitation instead of a result.
+Humans keep final control: the AI only suggests. Nothing is approved, edited or published automatically. Accepting/dismissing suggestions and approvals are later phases.
 
-Text checks run on body text (Text, and confirmed PDF text). Image checks run on Image content.
+## Scope
+- Text and PDF (extracted, confirmed text) reviewed by the AI.
+- Images: vision review of visible text only, against supplied rules and facts; the page says so.
+- Verdict for every numeric/factual claim: supported, contradicted or cannot_verify.
+- Tone findings only when an active approved tone rule exists.
+- Suggested rewrites stored, shown as suggestions only.
+- One AI review per submitted version; a retry is allowed only if the earlier attempt failed and saved nothing.
+- Deduplicate AI findings against Phase 4 findings for the same span, keeping all valid source references.
+- Understandable messages for rate limits, timeouts, invalid AI responses, insufficient AI credits, network errors and unsupported files; submission and deterministic findings always stand.
+- AI call log (provider, model, prompt version, safe summary, status) per call; no keys and no full content in logs.
 
-## Database
-- `reviews`: content_id, content_version_id, workspace_id, run_at, status (completed / partial), dropped_findings_count.
-- `findings`: fields from the specification; source = "deterministic"; outcome, suggested_text, final_text, dismissal_reason, decided_by left empty for later phases.
-- Read-only through the database API; written only by a checked server-side database function that confirms the content is submitted, the version matches, and the caller owns it. Audit event "review_completed".
-- Read access: content owner and workspace Managers (same rule as reading the content). Admin and Reviewer denied, matching Phase 3. Signed-out: no privileges.
-- Knowledge Base stays Admin-only: the server reads rules, glossary and palette for the content's workspace with elevated access inside the check, never widening Knowledge Base access.
+## Server-side validation (finding rejected or downgraded when)
+1. Quoted text is not an exact substring of the version text (offsets computed by the server, never taken from the AI).
+2. Cited code doesn't exist in the content's workspace.
+3. Cited source is inactive, unapproved (facts) or not part of the material sent for this review.
+4. Cited passage is not present in the cited source.
+5. Offsets are invalid.
+6. The response fails the strict schema (whole response rejected, nothing saved).
+Downgraded findings become cannot_verify with no verified citation; the count of rejected/downgraded findings is recorded on the review.
 
-## Flow
-```text
-Creator submits -> server loads exact version + workspace rules/glossary/palette
- -> runs pure checks (text) ; browser supplies image colour sample (palette)
- -> server validates findings (offsets match quoted text, cited codes exist)
- -> saves review + findings, drops invalid ones (counted) -> audit event
-```
-Palette colours come from the browser, so the server treats them as an untrusted sample: it re-validates the format and never lets them affect non-palette findings.
+## Permissions (unchanged from Phases 3–4)
+- Creator: runs/reads AI review for own submitted content.
+- Manager: reads AI findings for submitted content in their workspace.
+- Reviewer and Admin: no content access yet (review queue/approval come later).
+- Other workspaces and signed-out: no access.
+- Knowledge Base stays Admin-only; the server reads it with server privileges only after confirming the caller owns the submitted content.
 
-## Screens
-- Content detail: new "Automatic checks" section with findings grouped by check, highlighted quotes in the text, contrast ratio and colour swatches, and "could not check" notes.
-- My Content / All Content: finding counts per item.
+## Out of scope
+Accepting/dismissing findings, applying rewrites, comments, reviewer assignment, approval workflow, Insights, AI transparency page, guideline import assistant.
 
-## Permissions
-| | Creator | Manager | Reviewer | Admin |
-|---|---|---|---|---|
-| Trigger checks | Own content, on submit | No | No | No |
-| Read findings | Own content | Submitted content, own workspace | No | No |
-| Change findings | No | No | No | No |
+## Technical details
+- Architecture: TanStack Start authenticated server function (`runAiReview`) instead of an `ai-review` Edge Function; same security role (server-only, credentials never in the browser). Called after `submitContent` and via a retry button.
+- AI: Lovable AI Gateway, default Gemini Flash model with vision (`google/gemini-3-flash-preview`); tool calling with a strict JSON schema (quoted_text, verdict, category, severity, confidence, explanation, cited_code, cited_passage, suggested_text). If unavailable, stop and ask before switching model. Prompt text = spec system instruction verbatim, versioned (`prompt_version`).
+- Pure module `src/lib/ai-validate.ts`: schema parse, span location (first exact match, UTF-16), citation checks, downgrade, dedup against deterministic findings. Fully unit-tested without network.
+- DB migration:
+  - `reviews`: add `source` ('deterministic' | 'ai'); unique (content_version_id, source) replacing per-version uniqueness, so each version gets one of each.
+  - `findings`: reuse table (`source='ai'`, `suggested_text`, `confidence`, verdict mapped to outcome: supported/contradicted/cannot_verify; plus existing violation for rule findings).
+  - New `ai_calls` (id, workspace_id, content_id, content_version_id, provider, model, prompt_version, what_was_sent_summary, status, error_kind, created_at); RLS read = Admin of workspace only; writes service-role only; immutable.
+  - Extend `record_review` (or new `record_ai_review`) SECURITY DEFINER, service-role only: atomic review + findings + audit `ai_review_completed`; re-validates citations in-workspace and active.
+  - Revoke default grants on new table (signed-in SELECT only, signed-out none), as done in Phases 2–4.
+- UI: "AI review" section in findings panel with "AI" badge, verdict labels, verified citation only when validated, suggested text, limitation notes and error state with retry.
+- Tests:
+  - Unit: validation of fabricated quotes, fake codes, inactive/unapproved sources, passage mismatch, bad offsets, invalid schema, dedup, emoji offsets.
+  - Live security (temporary accounts, two workspaces): role access, cross-workspace denial, duplicate refusal, atomic rollback, ai_calls Admin-only, immutability, signed-out denial.
+  - AI call mocked in tests; one real end-to-end browser run (text, PDF, image) with a real AI call, reported honestly.
+  - Full regression of Phases 1–4.
 
-## Tests and acceptance
-- Unit tests per check with exact offsets, case/whole-word cases, unicode, overlapping terms, contrast ratios against known WCAG values, Delta E reference values, empty inputs.
-- Live tests with temporary accounts across two workspaces: only owners trigger; findings tied to the exact version; direct writes refused; Manager read in own workspace only; Admin/Reviewer/other workspace denied; no Knowledge Base leakage.
-- Regression: Phase 1–3 suites, browser check of submit → findings.
-- Acceptance: all six checks produce correct saved findings for real submissions; tests pass; no security regressions.
-
-## Out of scope (later phases)
-AI review and resolving claims against facts, review screen decisions, approval workflow, comments, insights, AI transparency.
+## Acceptance criteria
+- Fabricated citations never shown as verified; downgrade counts recorded.
+- Numeric claims without approved support are cannot_verify.
+- One AI review per version, tied to the exact version; atomic.
+- Role and workspace access identical to Phase 4; Knowledge Base still Admin-only.
+- Errors show understandable messages; submission and Phase 4 findings unaffected.
+- All Phase 1–4 tests still pass; skipped tests reported as skipped.
 
 ## Still open from Phase 1
-One-hour session persistence (deferred) and 11 skipped Phase 1 live tests.
+One-hour session persistence (PENDING/DEFERRED) and the remaining skipped Phase 1 live tests.
