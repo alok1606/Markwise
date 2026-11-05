@@ -20,4 +20,11 @@
 - [ ] Run 11 skipped live tests with a controlled fixture file
 
 ## Phase 2
-- [ ] Waiting for explicit owner approval before starting
+- [x] Approved by owner and started
+
+## Phase 2 — Brand Knowledge Base
+- [x] Schema, RLS, storage, versioning and audit
+- [x] Brand profile, guidelines, rules, facts, glossary, visual identity, dashboard
+- [x] Admin live browser checks
+- [ ] Live check: Manager, Reviewer, Creator see "Administrator access required" on /knowledge (needs owner sign-in)
+- [ ] Run 11 live knowledge-base authorization tests (needs controlled fixture file)

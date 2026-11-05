@@ -22,3 +22,6 @@
 - Clear private query caches on SDK sign-out or account replacement, not only sidebar logout, to prevent stale account data rendering.
 - Resolve membership email against confirmed Auth identities and return the current Auth email for the owner's profile; the signup email copy is not authoritative after email changes.
 - Active workspace is chosen client-side by a pure selector (stored per-user choice if still a member, else invited workspace, deterministic order) and persisted in localStorage; selection is display-only and never affects roles or server authorization.
+- Knowledge-base tables are Admin-only per workspace (RLS via has_role admin on every operation) because the Master Specification makes the knowledge base an Admin-only area; later phases must read it server-side rather than widening these policies silently.
+- Rule and fact edits/deletes snapshot the previous row into history tables via triggers, and fact approval stamps the approver in the database; editing an approved fact's wording returns it to pending so no unapproved text is ever presented as verified.
+- Knowledge files upload to private buckets under <workspace_id>/<uuid>.<ext>; the server registers them only after checking the path and the stored object's real size/type, so browser claims are never trusted.
