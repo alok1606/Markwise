@@ -243,6 +243,170 @@ export type Database = {
           },
         ]
       }
+      content_versions: {
+        Row: {
+          alt_text: string | null
+          audience: string
+          background_color: string | null
+          body_text: string
+          change_summary: string
+          changed_by: string
+          channel: string
+          content_id: string
+          created_at: string
+          file_mime: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          goal: string
+          id: string
+          text_color: string | null
+          title: string
+          version_number: number
+          workspace_id: string
+        }
+        Insert: {
+          alt_text?: string | null
+          audience: string
+          background_color?: string | null
+          body_text: string
+          change_summary?: string
+          changed_by: string
+          channel: string
+          content_id: string
+          created_at?: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          goal: string
+          id?: string
+          text_color?: string | null
+          title: string
+          version_number: number
+          workspace_id: string
+        }
+        Update: {
+          alt_text?: string | null
+          audience?: string
+          background_color?: string | null
+          body_text?: string
+          change_summary?: string
+          changed_by?: string
+          channel?: string
+          content_id?: string
+          created_at?: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          goal?: string
+          id?: string
+          text_color?: string | null
+          title?: string
+          version_number?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_versions_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contents: {
+        Row: {
+          alt_text: string | null
+          audience: string
+          background_color: string | null
+          body_text: string
+          channel: string
+          created_at: string
+          deleted_at: string | null
+          file_mime: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          goal: string
+          id: string
+          owner_id: string
+          status: Database["public"]["Enums"]["content_status"]
+          submitted_at: string | null
+          text_color: string | null
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          alt_text?: string | null
+          audience?: string
+          background_color?: string | null
+          body_text?: string
+          channel?: string
+          created_at?: string
+          deleted_at?: string | null
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          goal?: string
+          id?: string
+          owner_id: string
+          status?: Database["public"]["Enums"]["content_status"]
+          submitted_at?: string | null
+          text_color?: string | null
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          alt_text?: string | null
+          audience?: string
+          background_color?: string | null
+          body_text?: string
+          channel?: string
+          created_at?: string
+          deleted_at?: string | null
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          goal?: string
+          id?: string
+          owner_id?: string
+          status?: Database["public"]["Enums"]["content_status"]
+          submitted_at?: string | null
+          text_color?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["content_type"]
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fact_history: {
         Row: {
           change: string
@@ -694,6 +858,60 @@ export type Database = {
         }
         Returns: undefined
       }
+      can_read_content: { Args: { _content_id: string }; Returns: boolean }
+      can_read_content_file: { Args: { _name: string }; Returns: boolean }
+      can_upload_content_file: { Args: { _name: string }; Returns: boolean }
+      content_audit: {
+        Args: {
+          _action: string
+          _actor: string
+          _id: string
+          _meta: Json
+          _ws: string
+        }
+        Returns: undefined
+      }
+      content_file_content_id: { Args: { _name: string }; Returns: string }
+      content_snapshot: {
+        Args: {
+          _actor: string
+          _c: Database["public"]["Tables"]["contents"]["Row"]
+          _summary: string
+        }
+        Returns: undefined
+      }
+      content_validate: {
+        Args: {
+          _alt: string
+          _audience: string
+          _bg: string
+          _body: string
+          _channel: string
+          _goal: string
+          _tc: string
+          _title: string
+        }
+        Returns: undefined
+      }
+      create_content: {
+        Args: {
+          _alt_text: string
+          _audience: string
+          _background_color: string
+          _body_text: string
+          _channel: string
+          _goal: string
+          _text_color: string
+          _title: string
+          _type: Database["public"]["Enums"]["content_type"]
+          _workspace_id: string
+        }
+        Returns: string
+      }
+      delete_content_draft: {
+        Args: { _content_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -716,6 +934,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      purge_workspace_content: {
+        Args: { _workspace_id: string }
+        Returns: undefined
+      }
       remove_demo_knowledge: {
         Args: { _workspace_id: string }
         Returns: undefined
@@ -724,9 +946,49 @@ export type Database = {
         Args: { _name: string; _workspace_id: string }
         Returns: undefined
       }
+      save_content_draft: {
+        Args: {
+          _alt_text: string
+          _audience: string
+          _background_color: string
+          _body_text: string
+          _channel: string
+          _content_id: string
+          _expected_version: number
+          _goal: string
+          _pdf_text_confirmed: boolean
+          _text_color: string
+          _title: string
+        }
+        Returns: number
+      }
+      set_content_file: {
+        Args: {
+          _actor: string
+          _content_id: string
+          _expected_version: number
+          _file_mime: string
+          _file_name: string
+          _file_path: string
+          _file_size: number
+        }
+        Returns: number
+      }
+      submit_content: {
+        Args: { _content_id: string; _expected_version: number }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "creator" | "manager" | "reviewer" | "admin"
+      content_status:
+        | "draft"
+        | "submitted"
+        | "in_review"
+        | "approved"
+        | "rejected"
+        | "changes_requested"
+      content_type: "text" | "image" | "pdf"
       fact_status: "pending" | "approved" | "rejected" | "expired"
       rule_category:
         | "legal"
@@ -866,6 +1128,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["creator", "manager", "reviewer", "admin"],
+      content_status: [
+        "draft",
+        "submitted",
+        "in_review",
+        "approved",
+        "rejected",
+        "changes_requested",
+      ],
+      content_type: ["text", "image", "pdf"],
       fact_status: ["pending", "approved", "rejected", "expired"],
       rule_category: [
         "legal",

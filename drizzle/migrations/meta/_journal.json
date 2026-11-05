@@ -29,6 +29,27 @@
       "when": 1793878374746,
       "tag": "0003_markwise_phase2_knowledge_base",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793881136431,
+      "tag": "0004_markwise_phase3_content",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793881372217,
+      "tag": "0005_markwise_phase3_content_purge",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793881547048,
+      "tag": "0006_markwise_phase3_content_grants",
+      "breakpoints": true
     }
   ]
 }

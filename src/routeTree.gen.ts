@@ -22,6 +22,10 @@ import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedContentIndexRouteImport } from './routes/_authenticated/content.index'
+import { Route as AuthenticatedContentIdRouteImport } from './routes/_authenticated/content.$id'
+import { Route as AuthenticatedContentAllRouteImport } from './routes/_authenticated/content.all'
+import { Route as AuthenticatedContentNewRouteImport } from './routes/_authenticated/content.new'
 import { Route as AuthenticatedKnowledgeIndexRouteImport } from './routes/_authenticated/knowledge.index'
 import { Route as AuthenticatedKnowledgeFactsRouteImport } from './routes/_authenticated/knowledge.facts'
 import { Route as AuthenticatedKnowledgeGlossaryRouteImport } from './routes/_authenticated/knowledge.glossary'
@@ -94,6 +98,27 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedContentIndexRoute =
+  AuthenticatedContentIndexRouteImport.update({
+    id: '/content/',
+    path: '/content/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedContentIdRoute = AuthenticatedContentIdRouteImport.update({
+  id: '/content/$id',
+  path: '/content/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedContentAllRoute = AuthenticatedContentAllRouteImport.update({
+  id: '/content/all',
+  path: '/content/all',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedContentNewRoute = AuthenticatedContentNewRouteImport.update({
+  id: '/content/new',
+  path: '/content/new',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedKnowledgeIndexRoute =
   AuthenticatedKnowledgeIndexRouteImport.update({
     id: '/',
@@ -150,12 +175,16 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/content/$id': typeof AuthenticatedContentIdRoute
+  '/content/all': typeof AuthenticatedContentAllRoute
+  '/content/new': typeof AuthenticatedContentNewRoute
   '/knowledge/facts': typeof AuthenticatedKnowledgeFactsRoute
   '/knowledge/glossary': typeof AuthenticatedKnowledgeGlossaryRoute
   '/knowledge/guidelines': typeof AuthenticatedKnowledgeGuidelinesRoute
   '/knowledge/profile': typeof AuthenticatedKnowledgeProfileRoute
   '/knowledge/rules': typeof AuthenticatedKnowledgeRulesRoute
   '/knowledge/visual': typeof AuthenticatedKnowledgeVisualRoute
+  '/content/': typeof AuthenticatedContentIndexRoute
   '/knowledge/': typeof AuthenticatedKnowledgeIndexRoute
 }
 export interface FileRoutesByTo {
@@ -170,12 +199,16 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/content/$id': typeof AuthenticatedContentIdRoute
+  '/content/all': typeof AuthenticatedContentAllRoute
+  '/content/new': typeof AuthenticatedContentNewRoute
   '/knowledge/facts': typeof AuthenticatedKnowledgeFactsRoute
   '/knowledge/glossary': typeof AuthenticatedKnowledgeGlossaryRoute
   '/knowledge/guidelines': typeof AuthenticatedKnowledgeGuidelinesRoute
   '/knowledge/profile': typeof AuthenticatedKnowledgeProfileRoute
   '/knowledge/rules': typeof AuthenticatedKnowledgeRulesRoute
   '/knowledge/visual': typeof AuthenticatedKnowledgeVisualRoute
+  '/content': typeof AuthenticatedContentIndexRoute
   '/knowledge': typeof AuthenticatedKnowledgeIndexRoute
 }
 export interface FileRoutesById {
@@ -193,12 +226,16 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/_authenticated/content/$id': typeof AuthenticatedContentIdRoute
+  '/_authenticated/content/all': typeof AuthenticatedContentAllRoute
+  '/_authenticated/content/new': typeof AuthenticatedContentNewRoute
   '/_authenticated/knowledge/facts': typeof AuthenticatedKnowledgeFactsRoute
   '/_authenticated/knowledge/glossary': typeof AuthenticatedKnowledgeGlossaryRoute
   '/_authenticated/knowledge/guidelines': typeof AuthenticatedKnowledgeGuidelinesRoute
   '/_authenticated/knowledge/profile': typeof AuthenticatedKnowledgeProfileRoute
   '/_authenticated/knowledge/rules': typeof AuthenticatedKnowledgeRulesRoute
   '/_authenticated/knowledge/visual': typeof AuthenticatedKnowledgeVisualRoute
+  '/_authenticated/content/': typeof AuthenticatedContentIndexRoute
   '/_authenticated/knowledge/': typeof AuthenticatedKnowledgeIndexRoute
 }
 export interface FileRouteTypes {
@@ -216,12 +253,16 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/users'
+    | '/content/$id'
+    | '/content/all'
+    | '/content/new'
     | '/knowledge/facts'
     | '/knowledge/glossary'
     | '/knowledge/guidelines'
     | '/knowledge/profile'
     | '/knowledge/rules'
     | '/knowledge/visual'
+    | '/content/'
     | '/knowledge/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -236,12 +277,16 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/users'
+    | '/content/$id'
+    | '/content/all'
+    | '/content/new'
     | '/knowledge/facts'
     | '/knowledge/glossary'
     | '/knowledge/guidelines'
     | '/knowledge/profile'
     | '/knowledge/rules'
     | '/knowledge/visual'
+    | '/content'
     | '/knowledge'
   id:
     | '__root__'
@@ -258,12 +303,16 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/settings'
     | '/_authenticated/users'
+    | '/_authenticated/content/$id'
+    | '/_authenticated/content/all'
+    | '/_authenticated/content/new'
     | '/_authenticated/knowledge/facts'
     | '/_authenticated/knowledge/glossary'
     | '/_authenticated/knowledge/guidelines'
     | '/_authenticated/knowledge/profile'
     | '/_authenticated/knowledge/rules'
     | '/_authenticated/knowledge/visual'
+    | '/_authenticated/content/'
     | '/_authenticated/knowledge/'
   fileRoutesById: FileRoutesById
 }
@@ -370,6 +419,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/content/': {
+      id: '/_authenticated/content/'
+      path: '/content'
+      fullPath: '/content/'
+      preLoaderRoute: typeof AuthenticatedContentIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/content/$id': {
+      id: '/_authenticated/content/$id'
+      path: '/content/$id'
+      fullPath: '/content/$id'
+      preLoaderRoute: typeof AuthenticatedContentIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/content/all': {
+      id: '/_authenticated/content/all'
+      path: '/content/all'
+      fullPath: '/content/all'
+      preLoaderRoute: typeof AuthenticatedContentAllRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/content/new': {
+      id: '/_authenticated/content/new'
+      path: '/content/new'
+      fullPath: '/content/new'
+      preLoaderRoute: typeof AuthenticatedContentNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/knowledge/': {
       id: '/_authenticated/knowledge/'
       path: '/'
@@ -456,6 +533,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedContentIdRoute: typeof AuthenticatedContentIdRoute
+  AuthenticatedContentAllRoute: typeof AuthenticatedContentAllRoute
+  AuthenticatedContentNewRoute: typeof AuthenticatedContentNewRoute
+  AuthenticatedContentIndexRoute: typeof AuthenticatedContentIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -465,6 +546,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedContentIdRoute: AuthenticatedContentIdRoute,
+  AuthenticatedContentAllRoute: AuthenticatedContentAllRoute,
+  AuthenticatedContentNewRoute: AuthenticatedContentNewRoute,
+  AuthenticatedContentIndexRoute: AuthenticatedContentIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

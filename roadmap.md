@@ -31,4 +31,8 @@
 - [x] Phase 2 COMPLETE (owner-approved 2026-11-05)
 
 ## Phase 3
-- [ ] On hold until the owner says go
+- [x] Owner approved Phase 3 (2026-11-05 12:17 UTC)
+- [ ] Phase 3: database (contents, immutable versions, server-side versioning, race protection, audit, private file bucket)
+- [ ] Phase 3: server functions with real file signature checks
+- [ ] Phase 3: My Content, New Content (Text/Image/PDF), detail + history, All Content (Manager)
+- [ ] Phase 3: unit tests + live role/cross-workspace tests with temporary accounts; regression run; progress report
