@@ -94,13 +94,28 @@ Pass on bad input, empty states and repeated clicks across every main screen; mo
 - [ ] Each member's own role and contribution, written by them. We never draft these for them
 - [ ] Disclosure: Lovable (builder and Cloud), Lovable AI Gateway with Gemini model, pdfjs-dist, JSZip, pgvector, TanStack Start, shadcn/ui, Vitest, Playwright
 
-## 5. Decisions needed from you [D]
-1. Approve the vector extension, the JSZip library and the embedding model.
-2. AI budget caps: accuracy runs (for example 40 cases × 2 modes × 3 repeats ≈ 240 calls) and the maximum re-reviews per impact scan (for example 25).
-3. Use neutral reasons for non-Admins on flagged content (recommended), or show the changed fact wording.
-4. No generated edited .docx/.pptx files: confirm.
-5. Build the import assistant, Insights, Activity and transparency pages in 7.0, or instead remove those claims from the final feature list.
-6. Judge access: shared demo accounts per role, or self-signup plus a written guide (the public role picker stays off).
+## 5. Owner decisions (approved 5 Nov 2026, planning only)
+- **Stack:** keep React/Vite/TypeScript and TanStack Start server functions. No move to FastAPI, Next.js or Edge Functions.
+- **Vector extension:** approved. [V] `vector` is listed as available in our Cloud database but not yet installed. Installation is confirmed at the start of 7C.
+- **JSZip:** approved for parsing Word and PowerPoint files in the browser.
+- **Embedding model:** [V] listed as available today: `google/gemini-embedding-2` (default, text 0.0000008 credits/token, zero retention), `openai/text-embedding-3-small` (0.00000008/token), `text-embedding-3-large`, and legacy `gemini-embedding-001`. [A] Vector size is not shown in the listing. It gets measured with one test call at the start of 7C. If it exceeds the database index limit (2,000), the choice of a smaller-dimension option comes back to you; nothing is changed silently.
+- **Accuracy run caps:** default 40 cases × 2 modes × 3 repeats = 240 calls. **Hard cap of 300 AI calls per run, retries included.** Cost estimate plus explicit confirmation before starting. Stops safely when the cap is hit or credits run out (402/403). Partial results are kept, and resuming skips completed case/mode/repeat items.
+- **Impact scan caps:** at most 25 AI re-reviews per batch, in resumable batches. Exact matching always runs, even if embeddings or AI fail. Scans record `complete | partial | failed`; a partial scan never reports "no impact".
+- **Privacy:** non-Admins see only neutral reasons ("An approved fact this item relied on was updated"). Admin-only knowledge base wording is never exposed.
+- **Office files:** never generate edited .docx/.pptx files. The original upload is kept, and suggestions are shown in the app. **Encrypted and macro-enabled files (.docm, .pptm, vbaProject parts, encrypted packages) are rejected.**
+- **7.0 scope:** all audit gaps get built and tested (Insights, import assistant, Activity tab, public AI page, Admin AI-call log, demo page + full FACT-014/LEGAL-03 run, dashboard text, reviewer display name, GitHub and deployment docs). Any remaining limitation gets reported, not hidden.
+- **Judge access:** the public role picker stays off. Four dedicated demo accounts (Creator, Manager, Reviewer, Admin) in one demo workspace with Nimbus data. Passwords are shared privately through the submission form, never in the repo or docs. The repo only explains how to use the four roles.
+- **Gates:** 7.0 → 7A → 7B → 7C → 7D. Each phase gets its own report, test evidence (passed / failed / skipped / partial listed separately), acceptance criteria and your approval. No automatic move to the next phase.
+
+## 5a. Verified dates and 72-hour feasibility
+[V] From the official rules: event 2–13 Nov 2026, times in IST. Round 2 runs Wed 4 Nov to Sat 7 Nov (72 h from 10:00). Round 3 runs Tue 10 Nov to Fri 13 Nov: "seventy-two hours from 10:00", so it opens 10 Nov 10:00 IST and closes about 13 Nov 10:00 IST. [A] The rules give no explicit closing clock time for Round 3; confirm it in the organiser's Round 3 email. There is no late window.
+[D] Today is 5 Nov, inside the Round 2 window and before Round 3 opens. The rules seen don't say whether work done before 10 Nov counts for Round 3. Please confirm with the Round 2 result email before we rely on early work.
+
+Realistic estimate if everything is done inside the 72 hours:
+- **Fits:** 7.0 essentials (Insights, Activity, AI page, AI-call log, demo page, fixes, docs); 7A; 7B for paragraphs, tables, slide text, notes and alt text.
+- **At risk:** 7C in full (embeddings, triggers, batching, notifications) on top of the others, plus the 300-call accuracy run time and rate limits.
+- **Does not fit comfortably:** all five phases with full live security and browser evidence each, plus the PDF and submission docs.
+- **Priority if time runs short:** keep security and the central workflow intact; then 7A, 7B and 7C (scored 20 points, against the exact Pack wording); then the 7.0 items that carry 2.5 points each in completeness. The import assistant is the 7.0 item most likely to be cut, and would be reported as unfinished. Any cut is reported honestly, never hidden.
 
 ## 6. Cost, usage and risks [A: estimates]
 - **AI calls:** accuracy harness about 250–750 calls per full run depending on repeats; impact scans of 1–25 calls each; embeddings are cheap per chunk; import assistant about 1 call per document. Costs scale with the caps above.
