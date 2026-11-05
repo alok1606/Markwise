@@ -26,7 +26,8 @@ describe.skipIf(!fixturePath || !url || !key || !service)('Live Phase 4 review a
     const [r, g] = await Promise.all([
       admin.from('rules').select('id,code,title,description,severity,category,active,kind,pattern').eq('workspace_id', ws).eq('active', true).eq('kind', 'banned_term'),
       admin.from('glossary').select('id,preferred_term,avoided_terms,case_sensitive,note').eq('workspace_id', ws)]);
-    return { rules: r.data as BannedRule[], glossary: g.data ?? [] };
+    // Use only this suite's own records so other data in the workspace cannot change the expected counts.
+    return { rules: (r.data as BannedRule[]).filter(x => x.code === 'P4-LEGAL'), glossary: (g.data ?? []).filter(x => x.preferred_term === 'customers') };
   }
   const record = (actor: string, id: string, vid: string, findings: unknown[], dropped = 0, lim: string[] = []) =>
     admin.rpc('record_review', { _actor: actor, _content_id: id, _content_version_id: vid, _findings: findings as never, _dropped: dropped, _limitations: lim as never });
