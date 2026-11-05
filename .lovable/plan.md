@@ -1,127 +1,221 @@
-# Phase 6 — Review Actions and Approval Workflow (final revised plan, NOT approved)
+# Phase 7 — Round 3 improvements (plan for owner approval)
 
-Sources: Master Specification 7.H, 7.I, Part 4, Part 5 (`approvals`, `comments`), Part 8, Part 9 tests 12–15; owner clarifications (14:01 UTC) and final amendments (14:04 UTC). Planning only — no implementation, no database change until explicit approval.
+Status: PLAN ONLY. Nothing below is built. Phases 1–6 stay as they are, except for the additive changes listed here.
 
-Schema facts confirmed (read-only): deterministic and AI findings share one `findings` table, linked to one `reviews` table where `source` is `deterministic` or `ai`, unique per (version, source); review `status` is `completed` or `partial`. AI call attempts are logged in `ai_calls` (`succeeded`/`failed`). There is currently no record of "AI review pending" for a version.
+## Sources and gaps
+- The saved Master Specification does not mention "Round 2" or "Round 3", and no separate Round 2 roadmap document has been supplied. This plan uses the Master Specification and the three Round 3 requirements as you stated them. If you share the Round 2 roadmap, I will reconcile the plan with it before implementation starts.
+- These specification items are still unbuilt and are **not** part of this plan unless you add them: Insights dashboard (7.J), AI transparency page (7.K), guideline import assistant (7.D), demo data (7.L), the mandatory end-to-end test (7.M) and the GitHub/Vercel documentation (Part 10).
+- Technology stack: no change. TanStack Start server functions stay in place of Edge Functions (already agreed), Lovable Cloud database/storage and the Lovable AI review model from Phase 5. Two new items need your approval: the PostgreSQL `vector` extension (available, not yet installed) and a browser library for reading Word and PowerPoint files (see Requirement 3).
 
-## 1. Lifecycle
+## Existing vs new
+| Area | Exists (Phases 1–6) | New in Phase 7 |
+|---|---|---|
+| Checks | 6 deterministic checks; AI review with validated citations and `cannot_verify` | Measured accuracy of both, with a no-guidelines baseline |
+| Facts/rules | Admin-only CRUD, history, fact approval | Impact scan when they change; outdated flags; notifications |
+| Content types | Text, Image, PDF (browser extraction) | DOCX and PPTX with paragraph/slide anchors |
+| Search | None | pgvector embeddings + exact matching |
+| Notifications | None | In-app notifications for content owners and assigned reviewers |
 
-Existing status values: `draft, submitted, in_review, approved, rejected`. Added: `checked, pending_manager, pending_reviewer, changes_requested`. `rejected` is now used as the terminal rejection. `in_review` stays in the type, marked deprecated, never written.
+---
 
-| Status | Meaning |
-|---|---|
-| draft | Creator editing (Phase 3, unchanged) |
-| submitted | Locked; deterministic checks for latest version running or failed |
-| checked | Deterministic review `completed` for latest version; Creator acts on findings; AI may still be pending |
-| pending_manager | Sent for approval, Manager route |
-| pending_reviewer | Sent for approval, named Reviewer route |
-| changes_requested | Returned by approver; Creator may revise and resubmit |
-| approved | Final, fully locked |
-| rejected | Final, fully locked; no resubmission through the normal workflow |
+## Requirement 1 — Measured Accuracy Harness
 
-### Transition table (enforced in database functions; everything else refused)
+**Features and workflow.** An Admin opens a new "Accuracy" page (Admin only) and manages a labelled dataset. Each case holds:
+- a draft (clean or flawed)
+- the brand context it is judged against: a fixed snapshot of rules, facts and glossary
+- the expected findings: category, severity, exact span or quote, expected outcome (violation / contradicted / supported / cannot_verify) and the expected citation
 
-| From | To | Who | Condition |
-|---|---|---|---|
-| draft | submitted | Creator (owner) | Phase 3 rules unchanged |
-| submitted | checked | System | Deterministic review for latest version recorded with status `completed` (`partial` keeps `submitted`) |
-| checked | submitted | Creator via Accept/Edit | New version created; rechecking starts |
-| checked | checked | Creator via Dismiss | Action recorded; no new version |
-| checked | pending_manager / pending_reviewer | Creator | Latest version checked; AI state for that version terminal (completed or failed); zero unresolved high/critical findings; route computed server-side |
-| pending_manager | approved / changes_requested / rejected | Manager, same workspace | Open approval; version is latest; approver is not the Creator; comment required for changes_requested and rejected |
-| pending_reviewer | approved / changes_requested / rejected | Assigned Reviewer only | Same, comment always required |
-| changes_requested | submitted | Creator | Revision saved as a new version, then submitted for rechecking |
-| approved, rejected | — | nobody | Terminal |
+The Admin starts a run, choosing the dataset version and a mode:
+- Markwise: deterministic checks plus AI with guidelines
+- Baseline: the same AI model and prompt structure, but with no brand guidelines and no citation validation
 
-Transition changes vs today: Phase 3 `submitted` now advances automatically to `checked`; `save_content_draft` and `submit_content` additionally accept `changes_requested`; `rejected` becomes reachable only via a decision.
+Results stay viewable and can be exported (CSV/JSON).
 
-## 2. AI completion and routing safety
-- New per-version AI state record: `pending` (set when the AI review is started for a version), then `completed` (AI review recorded) or `failed` (attempt failed). Retries move `failed` back to `pending` only while the content is `checked`.
-- Entering `checked` does not wait for AI (Phase 5 non-blocking kept).
-- `submit_for_approval` refuses while the latest version's AI state is `pending` or missing ("AI review still running"). If `failed`, submission is allowed; the dialog and approvers show a visible "AI review failed — routed on automatic checks only" warning, and the approval record stores `ai_state_at_routing = failed`.
-- Freeze: the AI recording function and retry refuse once the version has an approval record or the content is no longer `checked`. Late AI results are logged in `ai_calls` as rejected-late and never inserted as findings, so routing can never change silently. Both functions lock the same content row, so submit and AI recording cannot interleave.
+**Metrics** (computed in pure, unit-tested code):
+- Precision, recall and F1, overall and per category and severity. A finding matches an expected one when the category matches and the spans overlap (or the quote matches exactly).
+- Hallucinated-citation rate: citations the model returned that do not exist in, or are not supported by, the sources sent. Reported both before and after Markwise validation.
+- `cannot_verify` correctness: precision and recall on cases labelled "unverifiable".
+- Clean-draft false-positive rate.
+- Baseline vs Markwise difference for each metric.
 
-## 3. Rechecking and version linkage
-- Accept, Edit and post-change revisions create a new immutable version via existing server-side versioning, then reuse Phase 4 `record_review` and Phase 5 `record_ai_review`. No new checking engine.
-- Findings, citations and reviews stay linked to their version and are never modified.
-- Finding actions are allowed only on the latest checked version.
-- Approval records store `version_id`; decisions refused if a newer version exists.
+**Reproducibility.** Every run stores:
+- dataset version and hash, model ID, prompt version, mode
+- code version (commit)
+- the raw model output and a per-case hash
+- the repeat count, with each case run N times (default 3) to report spread
+- the deterministic part of the score, which must be identical between reruns
 
-## 4. Finding resolution
-For the latest checked version each finding is: accepted/edited (produced the next version; that version's fresh findings start unresolved), dismissed (reason mandatory; finding row untouched; visible to Creator, Manager and assigned Reviewer with reason, actor, time), or unresolved.
-Gate: only unresolved high/critical findings block submit-for-approval. If AI failed, the gate uses deterministic findings only.
+AI variance is shown as a range, never hidden. A seed dataset of about 40 cases (20 flawed, 20 clean) will be written for a fictional brand and **clearly labelled synthetic**. The headline result is never presented as a real-world accuracy claim.
 
-## 5. Routing (server-side, latest checked version, deterministic + AI findings including dismissed ones)
-- Any claim or legal category, or any `cannot_verify` outcome → `pending_reviewer`. Reviewer ID is validated: member of the same workspace, holds the reviewer role there, not the Creator. Otherwise refused.
-- Else → `pending_manager`; any supplied reviewer ID ignored.
-- Dismissal never removes Reviewer routing.
+**Database (new, Admin-only, workspace-scoped).**
+- `eval_datasets` (versioned, immutable once used)
+- `eval_cases`
+- `eval_expected_findings`
+- `eval_runs` (status, settings, hashes)
+- `eval_case_results` (raw output, matches)
+- `eval_metrics` (stored computed values)
 
-## 6. Permissions by role and state
+Results are immutable. Grants and RLS follow the Knowledge Base pattern.
 
-| Action | Creator (owner) | Manager (same ws) | Reviewer | Admin |
-|---|---|---|---|---|
-| View content/findings/actions | All states | submitted onward (unchanged) | Items with an approval assigned to them (current or past) | Denied (unchanged) |
-| Accept/Edit/Dismiss | `checked` only | No | No | No |
-| Edit content | `draft`, `changes_requested` | No | No | No |
-| Submit for approval | `checked`, AI terminal | No | No | No |
-| Decide | Never | `pending_manager` only | Own assignment in `pending_reviewer` | No |
-| Comment | Own item, after draft | Items they can view | Assigned items | No |
-| Approval history | Own items | Workspace items | Assigned items | No |
+**Backend and AI.**
+- Runs execute on the server in small batches with a progress record, honouring 429 back-off and stopping (not retrying) on 402/403.
+- The baseline uses a separate prompt version and its own logging, so it never affects real content.
+- Every AI call is logged to `ai_calls` with a distinct purpose.
 
-Reviewer read access is new and narrow, via security-definer `is_assigned_reviewer(content_id)` added to SELECT policies. No other Phase 1–5 policy is loosened; every policy addition will be listed in the report.
+**UI.**
+- Dataset list and editor, with span selection for expected findings
+- Run launcher with a cost estimate
+- Results page: metric tables, a Markwise-vs-baseline comparison, and per-case drill-down showing expected vs found
 
-## 7. Database migrations (one migration, additive only)
-1. `content_status` enum: add `checked, pending_manager, pending_reviewer, changes_requested`; comment `in_review` deprecated.
-2. `ai_review_states`: version_id (unique), content_id, workspace_id, state (`pending|completed|failed`), updated_at. Written only by functions. SELECT for those who can read the content.
-3. `finding_actions`: id, workspace_id, content_id, version_id, finding_id (FK → `findings`, single field, no separate AI field), action (`accepted|edited|dismissed`), reason (required for dismissed), final_text, result_version_id (required for accepted/edited), actor_id, created_at. Unique (finding_id). Function validates the finding belongs to the version. Immutable.
-4. `approvals`: id, workspace_id, content_id, version_id, route (`manager|reviewer`), reviewer_id (required iff reviewer route), assigned_by, ai_state_at_routing, status (`open|approved|changes_requested|rejected`), decision_comment, decided_by, decided_at, created_at. Partial unique index: one `open` per content. New cycle = new row. Decided rows immutable (open → decided once).
-5. `comments`: id, workspace_id, content_id, parent_id (same content), author_id, message (1–4000), created_at. Append-only.
-6. Grants for 2–5: SELECT to authenticated, ALL to service_role, none to anon; RLS on; SELECT policies per section 6; no client write policies.
-7. Functions: `act_on_finding`, `submit_for_approval`, `decide_approval`, `add_comment`, `is_assigned_reviewer`, AI-state helpers; extensions to `save_content_draft`, `submit_content`, `record_review` (advance to `checked` only when completed) and `record_ai_review` (freeze rule, set AI state). Audit events for every action/decision/comment.
-8. Backfill: content in `submitted` moves to `checked` only when its latest version has a deterministic review with status `completed` (not merely any review row). Its AI state is backfilled to `completed` if an AI review exists for that version, else `failed` if a failed AI call for that version is logged, else left missing (Creator must run AI review before routing). No other rows changed; history untouched.
+**Security.** Admin only. Dataset text never goes into real content tables. Run cost is capped per run and per day (configurable).
 
-## 8. Server functions and transactions
-Each database function is one transaction with `SELECT ... FOR UPDATE` on the content row and checks an `expected_version`:
-- `act_on_finding` → dismiss records; accept/edit apply text at verified offsets (text/PDF text; image findings dismiss-only), create version, status `submitted`, then app server runs existing checks + AI.
-- `submit_for_approval` → status, AI terminal, gate, routing, reviewer validation, insert approval.
-- `decide_approval` → lock content + approval; authorised actor; not Creator; version current; comment rules; set status.
-- `add_comment` → access check, insert.
-App server functions use authenticated middleware; no direct table writes.
-Guarantees: stale versions, duplicate approvals, self-approval, unassigned approval, edit-vs-approval races and late AI findings all refused in the database.
+**Dependencies.** Phase 4 checks and the Phase 5 AI review (same validators, reused through injection), Phase 2 Knowledge Base structures (for snapshots), and the AI call log.
 
-## 9. UI
-- Two-column review screen on content detail (underline + icon highlights, severity-sorted findings with category, confidence, quote, explanation, citation, Needs checking, suggested rewrite, actions).
-- Accept/Edit dialog with original vs proposed diff; Dismiss dialog with required reason; read-only version history.
-- Submit-for-approval dialog: computed route, blocking findings, Reviewer picker only when needed, "AI review running" disabled state, AI-failed warning.
-- Reviewer Review Queue; Manager status filter + approval queue; decision panel (approve / request changes / reject with comment); threaded comments; activity timeline. Accessible dialogs and status text.
+**Tests.**
+- Unit: matching, precision/recall/F1, hallucination rate, `cannot_verify` scoring, edge cases (no expected findings, no predictions).
+- Integration: a fake-model run gives exact known metrics, and reruns give identical deterministic scores.
+- Security: non-Admins and other workspaces are denied, and results cannot be changed.
+- Browser: create a case, run it with the fake model, view the results.
 
-## 10. Tests
-- Unit: transition table incl. terminal states, gate, routing (incl. AI-failed path), text application with Unicode, diff, comment/reason rules.
-- Security (temporary accounts, two workspaces, four roles): Reviewer sees only assigned items; Manager cannot decide reviewer route; no self-approval; Creator cannot act outside `checked`, bypass routing or resubmit rejected content; forged/cross-workspace/non-reviewer IDs refused; Admin denied; direct writes refused; immutability; audit rows.
-- Concurrency: duplicate decisions, decide vs new version, parallel finding actions, double submit, AI recording vs submit (late AI result refused).
-- AI gating: submit refused while pending; allowed with warning when failed; no findings added after routing.
-- Migration: backfill only moves content with a completed deterministic review on the latest version; partial/absent stay `submitted`.
-- Browser end-to-end: submit → findings → dismiss/accept/edit → recheck → Reviewer and Manager routes → request changes → revise → approve; separate reject path; comments.
-- Full regression of Phases 1–5; skipped tests reported separately.
+**Acceptance criteria.**
+- Metrics on the fake model match hand-computed values.
+- One real run of Markwise and baseline completes and is stored with all reproducibility fields.
+- A rerun from the stored settings reproduces the deterministic scores exactly and reports the AI spread.
 
-## 11. Implementation sequence
-1. Migration (section 7) and verification queries.
-2. Pure modules + unit tests.
-3. Server functions with rechecking via existing Phase 4/5 code and AI state tracking.
-4. UI.
-5. Security, concurrency, browser tests, regression, Phase 6 progress report.
+**Risks and costs.**
+- A real run costs about (cases × repeats × 2 modes) AI calls; for example 40×3×2 = 240 calls. A cost estimate is shown and confirmation is required before a run starts.
+- Synthetic data may not reflect real brands.
+- The span-matching rules affect the scores, so they will be documented.
 
-## 12. Regression risks
-- Changing `record_review`/`record_ai_review` could affect Phase 4/5 behaviour → rerun all Phase 4/5 unit and live suites.
-- New statuses may break existing lists, counts and badges (My Content, All Content, Manager visibility "submitted onward") → update filters and test Manager visibility for every new status.
-- Reviewer SELECT additions on content, versions, findings and files must not widen access for non-assigned users → explicit negative tests.
-- Backfill could mis-state content → limited to completed deterministic reviews, verified by query before/after.
-- Freeze rule could reject legitimate AI retries → retries allowed only in `checked`, tested.
-- AI latency (10–20 s) per new version delays routing.
+---
 
-## 13. Remaining ambiguities (proposed defaults)
-1. Image findings dismiss-only; image changes via changes_requested + replacement upload.
-2. Managers cannot reassign the Reviewer in Phase 6.
-3. Rejected content: an Admin or Creator may only start new content; no reopen function in Phase 6.
+## Requirement 2 — Fact-Change Impact Scan
 
-Out of scope: Insights, AI transparency page, guideline import, demo data. Phase 1 deferred items (one-hour session check, 3 profile tests) remain documented. Phase 6 not approved or started.
+**Features and workflow.**
+- When an Admin approves, edits, retires or deletes a fact, or creates, edits or deactivates a rule or glossary entry, a scan job is queued for that workspace.
+- The scan finds affected content in Approved, Checked, Awaiting manager/reviewer and Changes requested status (latest version only). It uses two methods:
+  - **Exact:** term and pattern matching for banned terms, glossary and numeric values in the old and new wording.
+  - **Semantic:** pgvector similarity between the changed item's old and new text and stored chunks of each content version, above a tuned threshold.
+- For each hit, the relevant checks are re-run on that version: the affected deterministic checks, plus an AI re-review when it involves facts or claims.
+- Results go into a new **impact review record**. Existing Phase 4–6 reviews, findings, approvals and versions are never changed.
+- Content with any new high/critical or contradicted finding is marked **Possibly outdated**, with the reason and the triggering change.
+- The content owner and the assigned reviewer (if any) receive an in-app notification.
+- Approved content is not automatically un-approved. A human decides: the Creator opens a new revision (new version → normal workflow), or a Manager/Reviewer clears the flag with a required comment.
+
+**Database.**
+- Enable the `vector` extension.
+- `content_chunks`: version-scoped chunks with offsets and an embedding, written by the server only.
+- `kb_embeddings`: embeddings for facts, rules and glossary entries.
+- `impact_scans`: trigger, old/new snapshot, status, counts.
+- `impact_hits`: content, version, method (exact/semantic), similarity score, re-check result.
+- `content_flags`: possibly_outdated, reason, cleared_by and comment, immutable history.
+- `notifications`: recipient, type, link, read_at; only the recipient can read it or mark it read.
+- Triggers on the Knowledge Base tables enqueue scans. Scan processing uses locked SECURITY DEFINER functions, following the existing pattern.
+
+**Backend and AI.**
+- Embeddings use the gateway's default embedding model, at the full dimensions confirmed at implementation, with the same model for documents and queries.
+- Chunks are created when a version is submitted, and backfilled for existing versions.
+- Scans run in a job, triggered on change and by a scheduled sweep for retries. Each batch is bounded, and the job pauses on 402/403.
+- Exact checks always run, even if embedding fails. A partial scan is recorded as partial, never as "no impact".
+
+**UI.**
+- "Possibly outdated" badge and reason on content pages and lists, plus an impact panel showing the triggering change and the new findings.
+- Notification bell with a list.
+- Admin "Impact scans" log on the Knowledge Base page.
+- Clear-flag dialog requiring a comment.
+
+**Security.**
+- Admins see scan logs for their workspace only.
+- Content flags are visible to the users who can already read that content (`can_read_content`).
+- Notifications are visible to the recipient only.
+- Knowledge Base text stays Admin-only; content pages show only the change summary needed to explain a flag. You will need to approve whether a fact's new wording can be shown to Creators and Reviewers, because the Knowledge Base is currently Admin-only.
+
+**Dependencies.** Phase 2 triggers and history, Phase 3 versions, Phase 4/5 checks, and Phase 6 statuses and reviewer assignment.
+
+**Tests.**
+- Unit: chunking with offsets, exact matching, threshold logic, flag rules.
+- Integration: changing a fact flags the matching approved content and notifies the owner and reviewer; unrelated content is not flagged; embedding failure still runs the exact checks and marks the scan partial.
+- Security: notifications and flags across roles and workspaces; flags and scan records cannot be changed.
+- Concurrency: two quick fact edits produce consistent scans.
+- Browser: Admin edits a fact; Creator sees the badge and notification; Manager clears the flag with a comment.
+
+**Acceptance criteria.**
+- On a prepared set, every content item containing the changed figure or term is flagged (exact recall 100%).
+- The semantic threshold is reported with measured precision and recall on a small labelled set.
+- No Phase 4–6 record is changed.
+
+**Risks and costs.**
+- Embedding cost for each version and each Knowledge Base item (small).
+- AI re-review cost for each hit.
+- Semantic threshold tuning, and false positives.
+- Large workspaces need batching.
+- Not real-time: the scan delay will be stated.
+
+---
+
+## Requirement 3 — DOCX and PowerPoint Review
+
+**Features and workflow.**
+- Creators upload a `.docx` or `.pptx` file, up to the existing size limits.
+- The browser extracts its structure:
+  - **DOCX:** paragraphs in order, with headings, tables flattened to paragraphs, and image alt text.
+  - **PPTX:** per slide, the title, body text boxes, speaker notes and image alt text.
+- As with PDFs, the Creator reviews and confirms the extracted text before saving.
+- The server checks the file's real signature (ZIP plus the expected internal parts) and registers it through the existing service-role function.
+- Checks and the AI review run on a combined text that records each block's location (paragraph N, or slide N with its part: title, body, notes or alt). Every finding is anchored to its block and an offset inside the block.
+- The review screen shows the document as paragraphs or a slide-by-slide outline, with findings and suggested edits shown in place.
+- Accept/Edit rewrites the confirmed extracted text and creates a new version, as with PDFs. The original file is kept unchanged.
+- Generating an edited .docx or .pptx file is out of scope unless you request it.
+
+**Database.**
+- Add `docx` and `pptx` to the content type and allowed file types.
+- `content_versions.blocks` (jsonb, immutable): each block's ID, kind, location and offsets.
+- `findings.block_id` (nullable): checked in the database to match the version's blocks.
+- Storage policy and registration function extended to the new types and signatures.
+
+**Backend and AI.**
+- Pure block-mapping module, with unit tests, that converts offsets between combined text and blocks.
+- The AI prompt receives block labels; the validator re-derives the block from the offsets and never trusts a block returned by the AI.
+- Alt-text accessibility check extended to images inside the documents.
+
+**Library choice (needs approval).** A browser ZIP/XML reader, such as `jszip` with custom parsing, or `mammoth` for DOCX only. No server-side native libraries (they would not run on the hosting runtime). Embedded images are not OCR'd.
+
+**UI.**
+- Upload options for Word and PowerPoint, an extraction review step, the paragraph view and slide outline, and per-block finding markers.
+
+**Security.** Same rules as Phase 3 files: private storage, Creator-only uploads into their own draft, signature checks, no overwrite. Macro-enabled files (`.docm`, `.pptm`) and encrypted files are rejected.
+
+**Dependencies.** Phase 3 upload, registration and versioning; Phase 4/5 checks and validators; Phase 6 actions and anchors.
+
+**Tests.**
+- Unit: parsing of fixture DOCX/PPTX files (paragraphs, tables, notes, alt text), block mapping and offsets with emoji.
+- Integration: a finding's block and offset reproduces the exact quote; a forged block ID is rejected.
+- Security: wrong signature, macro or encrypted file, cross-workspace upload.
+- Browser: upload each type, confirm the text, submit, see anchored findings, accept a suggestion.
+
+**Acceptance criteria.**
+- For both fixtures, every expected finding appears on the correct paragraph or slide (including notes and alt text), and accepting a suggestion produces a new version with the correct block text.
+
+**Risks.**
+- Complex layouts (SmartArt, charts, text in images) are not extracted; this will be shown to the user.
+- Very large decks increase AI cost and response time.
+
+---
+
+## Implementation sequence (one sub-phase at a time, each reported for your acceptance)
+1. **7A Accuracy harness:** it measures the existing system, and its results act as the baseline for later changes.
+2. **7B DOCX/PPTX review:** adds content types that 7C must then cover.
+3. **7C Fact-change impact scan:** vector extension, chunk backfill, scans, flags, notifications.
+4. Full Phase 1–7 regression and report.
+
+## Decisions needed before starting
+1. Approve the `vector` extension and a DOCX/PPTX browser library (jszip-based parsing preferred).
+2. Approve AI cost caps for evaluation runs (for example 300 calls per run) and impact re-reviews.
+3. Decide whether flagged content may show the changed fact's wording to non-Admins, or only a neutral summary.
+4. Confirm generated .docx/.pptx output stays out of scope.
+5. Supply the Round 2 roadmap if it exists.
+
+## Technical notes
+- New tables follow the existing rules: SELECT-only access through the database API, writes through locked SECURITY DEFINER or service-role functions, immutable records, audit events, explicit grants, no anon access.
+- AI calls stay in server-only files with an injectable model caller (testable offline) and are logged to `ai_calls`. Gateway errors are handled as before: 429 back-off; 402/403 pause the job.
+- Pure logic (metrics, block mapping, matching) goes in `src/lib` with unit tests. Live tests use temporary accounts, run one after another, and are cleaned up afterwards.
