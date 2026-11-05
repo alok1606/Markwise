@@ -261,3 +261,18 @@ These are manual checks performed by the owner, not automated tests.
 - Creator workspace and role display verified.
 
 Status: Phase 1 remains PENDING. Remaining blockers: normal-login session refresh; fresh signup-confirmation email delivery and redemption; fresh password-reset email delivery and completion. Live database tests remain skipped without a controlled fixture file. Phase 2 not started.
+
+## User-performed live checks and final recheck (2026-11-05 11:18 UTC)
+User-performed live checks (manual, not automated):
+- Fresh signup confirmation email arrived and verification succeeded (Krittibus Singh test account).
+- Password-reset email arrived and reset completed successfully (same account).
+- Role-specific login and dashboards verified for Admin, Manager, Reviewer, Creator.
+- All non-Admin roles denied /users.
+
+Corroborating auth logs (skrittibus@gmail.com): signup 11:13:32 (confirmation requested) -> verify 11:13:41 (signed up); recovery requested 11:14:12 (email hook succeeded) -> verify 11:14:28 -> password updated 11:15:47 -> logout 11:15:47 -> password login with new password 11:16:21.
+
+One-hour session persistence: NOT VERIFIED. No refresh-token grant appears in auth logs in the last 24 hours; earliest current session began 10:36 UTC, so no session has yet reached one hour.
+
+Regression tests: 28 passed, 0 failed, 11 skipped (live DB tests; no controlled fixture file).
+
+Decision: PENDING — sole blocker is normal-login session refresh after about one hour. Phase 2 not started.
