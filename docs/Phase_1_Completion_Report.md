@@ -23,10 +23,10 @@ Latest platform build diagnostic: **build OK**. No production deployment was mad
 
 ## Remaining verification and issues
 - First real administrator promotion completed on November 5, 2026 after confirmed signup and explicit owner authorization. No public administrator bootstrap exists.
-- Public signup with a reserved `example.com` test address was correctly rejected. End-to-end signup email delivery/confirmation needs a real mailbox; it has not been verified.
-- Password reset request and recovery forms are implemented, but email delivery and complete recovery-link password update remain unverified. A controlled recovery-link generation attempt was blocked by the environment's session-consent policy and was not bypassed.
-- Google/Lovable providers were enabled, but interactive external OAuth completion remains unverified.
-- Resolved on November 5, 2026: signed-out hard navigation to all five protected workspace pages now redirects to sign-in without console or page errors. The root waits for client initialization only for protected-page rendering; public pages retain server rendering and the existing authentication gate is unchanged. Signed-in verification awaits a real account.
+- Public signup with a reserved `example.com` test address was correctly rejected. Real signup confirmation attempts returned invalid/expired-link errors; email-signup confirmation is not yet verified. The owner's account was confirmed through Google instead.
+- Real password recovery activity on November 5, 2026 shows a successful reset request, recovery-link redemption, account update, sign-out and subsequent email/password login. Earlier controlled recovery-link generation was blocked and was not bypassed; the new evidence comes from the owner's actual activity.
+- Google sign-in completion is verified by real successful Google authentication and signed-in workspace readback. Sign in with Lovable completion remains unverified.
+- Resolved on November 5, 2026: signed-out hard navigation to all five protected workspace pages redirects to sign-in without console or page errors. The root waits for client initialization only for protected-page rendering; public pages retain server rendering and the existing authentication gate is unchanged. The owner's signed-in administrator page and reload also passed without page errors.
 - Concurrent last-administrator races were not tested; the role-assignment function locks the workspace row.
 - Phase 2 features are intentionally absent. Future sidebar entries are visibly unavailable rather than fake working pages. Demo access requires provisioned accounts; brand seed data was not added.
 
@@ -71,3 +71,19 @@ The platform's existing TanStack Router/Start setup was preserved rather than in
 - Before promotion, the owner's signed-in `/users` screen displayed “Administrator access required.” After promotion, the same browser check displayed “People & permissions,” loaded the member list, and read back the owner's `admin` role after reload with zero page errors.
 - Database readback confirmed the administrator role and exactly one promotion audit record. All seven retained permission unit tests passed.
 - First administrator setup is complete. Full password-reset email delivery/recovery and external Google/Lovable sign-in completion remain unverified; no later-phase features were added.
+
+## Email and Google end-to-end evidence — November 5, 2026, 10:01 UTC
+These results supersede the earlier outstanding Google/password-recovery notes. Verification uses the owner's real hosted authentication activity, not intercepted OAuth requests or invented test credentials.
+
+### Passed
+- **Google sign-in:** successful Google OIDC login and token exchange at 09:54:37 UTC; the account has a Google identity and was confirmed at that time.
+- **Email/password sign-in:** successful password login and token response at 09:56:04 UTC, after recovery and sign-out.
+- **Password recovery:** reset request and sending hook succeeded at 09:55:18; a recovery link was successfully redeemed from the reset page at 09:55:25; the account update succeeded and the app signed out at 09:55:41; subsequent password sign-in succeeded. This is the owner's completed flow, not an independently repeated mailbox test. Logs do not disclose or independently compare the old and new passwords.
+- **Signed-in workspace and persistence:** browser restored the owner's existing session, opened `/users`, loaded the administrator member list and confirmed the administrator role after refresh; zero page errors.
+- **Retained local tests:** nine passed across permissions, recovery-state handling and routing.
+
+### Not yet passed / limitations
+- **Email-signup confirmation:** confirmation requests and sending hooks succeeded, but observed confirmation-link visits returned `One-time token not found` / invalid-or-expired errors. Google confirmation is not proof the email-confirmation flow works. A fresh email-only signup and successful confirmation-link redemption remain required.
+- **Delivery-event reporting:** no managed delivery events were returned for this mailbox in the visible window. Hook success alone is not proof of inbox delivery. Recovery-link redemption provides successful recovery-flow evidence, but inbox placement is not independently observed.
+- **Sign in with Lovable:** no completed provider flow is established by this check; the requested Google flow passed.
+- No auth settings, passwords, providers or app behavior were changed during this verification. Phase 1 is not declared fully complete while email-signup confirmation and Lovable sign-in completion remain outstanding.
