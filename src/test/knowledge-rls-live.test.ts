@@ -18,7 +18,7 @@ describe.skipIf(!fixturePath || !url || !key)('Live Phase 2 knowledge base RLS, 
   const c: Record<string, SupabaseClient> = {}; let A = ''; let B = ''; const seed: Record<'A' | 'B', Seed> = {} as never;
 
   async function seedWorkspace(db: SupabaseClient, ws: string, label: string): Promise<Seed> {
-    const ok = <T,>(r: { data: T; error: unknown }) => { if (r.error) throw new Error(`${label} seed: ${JSON.stringify(r.error)}`); return r.data; };
+    const ok = <T,>(r: { data: T; error: unknown }) => { if (r.error || r.data == null) throw new Error(`${label} seed: ${JSON.stringify(r.error)}`); return r.data as NonNullable<T>; };
     const rule = ok(await db.from('rules').insert({ workspace_id: ws, code: `SEC-${label}`, category: 'legal', title: `Rule ${label}`, severity: 'high', rule_type: 'mandatory', kind: 'banned_term' }).select('id').single());
     const fact = ok(await db.from('facts').insert({ workspace_id: ws, code: `FACT-${label}`, title: `Fact ${label}`, statement: `Statement ${label}` }).select('id').single());
     const gl = ok(await db.from('glossary').insert({ workspace_id: ws, preferred_term: `term-${label}` }).select('id').single());
