@@ -11,8 +11,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter(); const queryClient = useQueryClient();
   useEffect(() => {
     let active = true;
+    let identity: string | null = null;
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
+      const nextIdentity = session?.user.id ?? null;
+      const changedIdentity = identity !== null && identity !== nextIdentity;
+      identity = nextIdentity;
+      if (event === 'SIGNED_OUT' || changedIdentity) {
+        void queryClient.cancelQueries();
+        queryClient.clear();
+      }
       setUser(session?.user ?? null); setLoading(false);
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
       if (event === 'SIGNED_OUT') setRecovery(false);

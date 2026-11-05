@@ -19,3 +19,5 @@
 - Store avatars privately under user-ID paths with owner-only storage policies; resolve temporary signed URLs for display.
 - Defer the root outlet to ClientOnly only while protected routes are matched; this prevents redirect hydration races while preserving public SSR and the managed auth gate.
 - Track password recovery in the shared auth event subscriber; the auth SDK may consume recovery URL fragments before the form renders.
+- Clear private query caches on SDK sign-out or account replacement, not only sidebar logout, to prevent stale account data rendering.
+- Resolve membership email against confirmed Auth identities and return the current Auth email for the owner's profile; the signup email copy is not authoritative after email changes.

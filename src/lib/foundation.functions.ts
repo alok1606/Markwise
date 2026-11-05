@@ -10,12 +10,15 @@ export const getAccess = createServerFn({ method: 'GET' }).middleware([requireSu
   ]);
   if (profile.error) throw new Error(profile.error.message);
   if (memberships.error) throw new Error(memberships.error.message);
+  // Auth is authoritative for email; profiles.email is the original signup copy.
+  const account = await context.supabase.auth.getUser();
+  if (account.error || !account.data.user) throw new Error('Please sign in again');
   let avatar: string | null = null;
   if (profile.data.avatar_url) {
     const signed = await context.supabase.storage.from('avatars').createSignedUrl(profile.data.avatar_url, 3600);
     avatar = signed.data?.signedUrl ?? null;
   }
-  return { profile: profile.data, memberships: memberships.data, avatar };
+  return { profile: { ...profile.data, email: account.data.user.email ?? '' }, memberships: memberships.data, avatar };
 });
 const workspaceSchema = z.object({ workspace_id: z.string().uuid() });
 export const getMembers = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).inputValidator(workspaceSchema).handler(async ({ data, context }) => {

@@ -1,5 +1,7 @@
 # Markwise Phase 1 completion report
 
+Latest comprehensive audit: see `docs/Phase_1_Audit_Report.md` (November 5, 2026). It supersedes historical counts and obsolete Lovable-sign-in requirements below. Current audit: 19 tests passed, eight skipped; Phase 1 acceptance remains pending on documented external checks.
+
 ## Implemented
 - Responsive landing page, email signup/login, Google and Lovable sign-in options, forgot-password and public recovery screens.
 - Confirmation-required signup; no automatic administrator assignment.

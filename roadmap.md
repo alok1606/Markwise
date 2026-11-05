@@ -1,4 +1,7 @@
 # Phase 1
+- [x] Complete comprehensive Phase 1 audit, fix confirmed bugs, and produce A–L results with external blockers; do not start Phase 2.
+- [ ] Finish full four-role/two-workspace and expiry/refresh live verification; blocked on authorized role-account fixtures and time-bound session testing.
+- [ ] Verify fresh email/Google login, reset mailbox receipt/redemption, branded sender and production redirects; blocked on owner interaction, owned sender domain and publication.
 - [x] Authentication, password recovery screens, landing page and profile settings.
 - [x] Workspace-isolated foundation, four roles, administrator management and secure navigation.
 - [x] Automated and browser verification; completion report with explicit limitations.

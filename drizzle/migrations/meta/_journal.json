@@ -15,6 +15,13 @@
       "when": 1793870334435,
       "tag": "0001_restrict_foundation_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793873675068,
+      "tag": "0002_harden_phase1_profile_and_member_identity",
+      "breakpoints": true
     }
   ]
 }
