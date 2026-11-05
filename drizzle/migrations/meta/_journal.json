@@ -50,6 +50,13 @@
       "when": 1793881547048,
       "tag": "0006_markwise_phase3_content_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793882571369,
+      "tag": "0007_harden_knowledge_grants",
+      "breakpoints": true
     }
   ]
 }

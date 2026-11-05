@@ -1,0 +1,4 @@
+REVOKE ALL ON public.brand_profiles, public.rules, public.rule_history, public.facts, public.fact_history, public.glossary, public.palette, public.brand_fonts, public.brand_documents, public.brand_assets FROM anon;
+REVOKE ALL ON public.brand_profiles, public.rules, public.rule_history, public.facts, public.fact_history, public.glossary, public.palette, public.brand_fonts, public.brand_documents, public.brand_assets FROM authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.brand_profiles, public.rules, public.facts, public.glossary, public.palette, public.brand_fonts, public.brand_documents, public.brand_assets TO authenticated;
+GRANT SELECT ON public.rule_history, public.fact_history TO authenticated;

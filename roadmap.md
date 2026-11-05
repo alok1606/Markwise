@@ -36,5 +36,9 @@
 - [x] Phase 3: server functions with real file signature checks
 - [x] Phase 3: My Content, New Content (Text/Image/PDF), detail + history, All Content (Manager)
 - [x] Phase 3: unit tests + live role/cross-workspace tests with temporary accounts; regression run; progress report
-- [ ] Phase 3 owner acceptance
-- [ ] (Recommended, needs approval) Tighten default table privileges on Phase 2 knowledge tables
+- [x] Phase 3 COMPLETE (owner-approved 2026-11-05)
+- [x] Phase 2 privilege hardening (approved; tests re-run, all passed)
+
+## Phase 4
+- [x] Implementation plan prepared
+- [ ] Owner approval of Phase 4 plan (waiting)

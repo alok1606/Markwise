@@ -1,6 +1,6 @@
 # Phase 3 — Content Creation and Submission: progress report (2026-11-05)
 
-Status: **PENDING owner acceptance.** Not marked complete. No AI review, brand checks, approval workflow or reviewer assignment was built.
+Status: **COMPLETE — approved by the owner on 2026-11-05 (12:41 UTC)** on the basis of the implementation and verification results below. No AI review, brand checks, approval workflow or reviewer assignment was built.
 
 ## Implemented
 - Content items (Text, Image, PDF) with title, type, channel, audience, goal; text up to 50,000 characters with live count; image alt text (may be empty) and optional text/background HEX colours; PDF text extracted in the browser and saved only after the creator confirms it.
@@ -35,3 +35,9 @@ Status: **PENDING owner acceptance.** Not marked complete. No AI review, brand c
 ## Not verified / open
 - Server-request role checks are a one-off script, not part of the saved suite.
 - Phase 1 deferred: one-hour session persistence (PENDING/DEFERRED) and 11 skipped Phase 1 live tests.
+
+## Owner acceptance (2026-11-05)
+Phase 3 approved as COMPLETE. Evidence preserved above: 14 unit tests passed; 18 live security tests passed; 59 full-suite tests passed; 0 failures; 98 skipped tests documented as unexecuted (fixture-dependent); live per-role and cross-workspace server-request checks. Phase 4 not started.
+
+## Post-acceptance re-run (after Phase 2 privilege hardening)
+The 18 content live tests were re-run with 7 fresh temporary accounts: 18 passed, 0 failed. Full suite (no fixture): 59 passed, 0 failed, 99 skipped (one more live test counted in the skipped live suites than the earlier tally; no test was removed).

@@ -104,3 +104,19 @@ Decision: Phase 2 security verification PASSED. Phase 2 awaits owner acceptance.
 Phase 2 — Brand Knowledge Base: COMPLETE (approved by the project owner).
 Carried-over items remain open and are not marked passed: Phase 1 one-hour session persistence (deferred) and 11 skipped Phase 1 live tests.
 Phase 3: ON HOLD until the owner explicitly says go.
+
+## Privilege hardening (owner-authorised, 2026-11-05)
+Scope: the 10 Knowledge Base tables and the two Knowledge Base storage buckets. No row rules, roles, functions or app behaviour changed.
+
+Before: signed-out (`anon`) and signed-in (`authenticated`) users had every table privilege (SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN) on all 10 tables. Row rules still blocked non-Admins.
+
+Changes:
+- `anon`: all privileges revoked on brand_profiles, rules, rule_history, facts, fact_history, glossary, palette, brand_fonts, brand_documents, brand_assets.
+- `authenticated`: TRUNCATE, REFERENCES, TRIGGER, MAINTAIN revoked on all 10 tables.
+- `authenticated` on rule_history and fact_history: INSERT, UPDATE, DELETE also revoked (now SELECT only). History rows are written by the database's own versioning triggers, which do not need these.
+- `authenticated` keeps SELECT, INSERT, UPDATE, DELETE on the 8 editable tables (Admin-only via unchanged row rules).
+- `service_role`: unchanged.
+
+Storage buckets (brand-documents, brand-assets): **no change.** Their four access rules already apply only to signed-in workspace Admins, and the underlying storage table permissions are platform-managed and shared with the avatar and content buckets, so altering them was out of scope and could affect other features.
+
+Verification with 7 temporary accounts across two workspaces (all deleted afterwards, 0 left): Knowledge Base RLS/storage/isolation 59 passed; Knowledge Base authorization 11 passed; content security 18 passed; 0 failed. A first run showed 3 failures caused by missing account IDs in my temporary test file (the demo-data check received an empty workspace ID); after correcting the test file, all 11 passed. Full suite without fixture: 59 passed, 99 skipped.

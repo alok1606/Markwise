@@ -1,83 +1,58 @@
-# Phase 3 — Content Creation and Submission (plan, not started)
+# Phase 4 — Deterministic Checking Engine (plan for approval)
 
-Source: saved Master Specification (Part 4 roles, data model `contents` / `content_versions`, Part 7E "Content submission", Part 9 tests). No separate "Round 2 build plan" file is saved in the project; if it differs from this plan, upload it and the plan will be adjusted before approval.
+Source: Master Specification Part 7 F (Deterministic checking engine) and Part 5 (reviews, findings). The specification has no numbered phase list; this plan treats Phase 4 as the non-AI checks that run on submitted content, as anticipated in the Phase 3 plan. If your Round 2 build plan defines Phase 4 differently, send it and this plan will be adjusted.
 
-Preserved unchanged: sign-in, roles, workspace selection, the Knowledge Base, all existing security rules and workspace separation.
+## What users get
+- When a Creator submits content, Markwise runs automatic checks on that exact version and saves the results as findings.
+- Creator sees the findings on their own submitted content; Manager sees findings for submitted content in their workspace (read-only).
+- Each finding shows: what was found, the exact quoted text and its position, severity, and the rule, glossary entry or measurement it is based on.
+- No AI, no approve/reject, no editing of findings, no reviewer assignment in this phase.
 
-## 1. Features
-- **New Content** (Creator): form with Title, Type, Channel, Audience, Goal, then type-specific input; Save draft.
-- **My Content** (Creator): list of own items with status, type, last updated; open, edit draft, view version history, delete own draft.
-- **Content detail**: current version, metadata, version history (read-only past versions), file preview/download for permitted users.
-- **Submit**: Creator marks a draft "Submitted" (locks it from editing). In Phase 3 submission only records intent; routing to a manager or reviewer happens in the approval phase.
-- **All Content** (Manager): read-only list of all submitted content in the workspace, with filters (type, status, creator).
-- Reviewer "Review Queue" and Insights stay locked placeholders.
+## The six checks (pure functions, no AI)
+1. Banned terms: every active banned-term rule; case-insensitive, whole-word where appropriate; every occurrence with exact start/end and quoted text; cites the rule code and description.
+2. Terminology: every glossary entry; flags avoided terms (respecting case sensitivity) and cites the preferred term.
+3. Numeric claims: extracts percentages and numbers with units; outcome "cannot_verify", explanation "Figure needs checking against approved facts." Provisional — for the later AI review.
+4. Image accessibility: flags missing alt text.
+5. Contrast: when text and background colours are given, calculates WCAG ratio, flags below 4.5:1, shows the actual ratio.
+6. Palette: reads image colours in the browser (canvas) and compares them with approved palette colours using CIE76 Delta E; flags colours further than 25 from every palette colour. If the image cannot be read, records a "could not check" limitation instead of a result.
 
-## 2. Content types and metadata
-| Type | Input | Rules |
-|---|---|---|
-| Text | Plain-text editor with live character count | Up to 50,000 characters |
-| Image | Private upload (PNG, JPG, WebP, up to 10 MB) | Alt-text field required but may be empty (later check flags it); optional text and background colour (HEX) |
-| PDF | Private upload (up to 20 MB) | Text extracted in the browser, shown to the creator, saved only after the creator confirms |
+Text checks run on body text (Text, and confirmed PDF text). Image checks run on Image content.
 
-Metadata: title (required, max 160), type, channel (e.g. Web, Email, Social, Print, Other), audience (max 300), goal (max 500).
+## Database
+- `reviews`: content_id, content_version_id, workspace_id, run_at, status (completed / partial), dropped_findings_count.
+- `findings`: fields from the specification; source = "deterministic"; outcome, suggested_text, final_text, dismissal_reason, decided_by left empty for later phases.
+- Read-only through the database API; written only by a checked server-side database function that confirms the content is submitted, the version matches, and the caller owns it. Audit event "review_completed".
+- Read access: content owner and workspace Managers (same rule as reading the content). Admin and Reviewer denied, matching Phase 3. Signed-out: no privileges.
+- Knowledge Base stays Admin-only: the server reads rules, glossary and palette for the content's workspace with elevated access inside the check, never widening Knowledge Base access.
 
-## 3. Lifecycle
+## Flow
 ```text
-draft --(creator edits: new version)--> draft
-draft --(creator submits)--> submitted   [locked]
-submitted --(later phases)--> in_review / approved / rejected / changes_requested
+Creator submits -> server loads exact version + workspace rules/glossary/palette
+ -> runs pure checks (text) ; browser supplies image colour sample (palette)
+ -> server validates findings (offsets match quoted text, cited codes exist)
+ -> saves review + findings, drops invalid ones (counted) -> audit event
 ```
-- Every save of text, alt text, colours or file creates a new immutable row in content versions; earlier versions are never edited or deleted.
-- Only drafts can be edited or deleted, and only by their owner.
-- Statuses for later phases are defined now but cannot be set in Phase 3.
+Palette colours come from the browser, so the server treats them as an untrusted sample: it re-validates the format and never lets them affect non-palette findings.
 
-## 4. Permissions
-| Action | Creator | Manager | Reviewer | Admin |
+## Screens
+- Content detail: new "Automatic checks" section with findings grouped by check, highlighted quotes in the text, contrast ratio and colour swatches, and "could not check" notes.
+- My Content / All Content: finding counts per item.
+
+## Permissions
+| | Creator | Manager | Reviewer | Admin |
 |---|---|---|---|---|
-| Create / edit own drafts | Yes | No | No | No |
-| View own content and history | Yes | — | — | — |
-| Submit own content | Yes | No | No | No |
-| View all submitted workspace content | No | Yes (read-only) | No (assigned items arrive in approval phase) | No* |
-| View other users' drafts | No | No | No | No |
-| Approve / reject | No (approval phase) | | | |
+| Trigger checks | Own content, on submit | No | No | No |
+| Read findings | Own content | Submitted content, own workspace | No | No |
+| Change findings | No | No | No | No |
 
-*Spec gives Admin no content rights; Admin keeps Knowledge Base and Users only. If you want Admins to see content, say so before approval.
+## Tests and acceptance
+- Unit tests per check with exact offsets, case/whole-word cases, unicode, overlapping terms, contrast ratios against known WCAG values, Delta E reference values, empty inputs.
+- Live tests with temporary accounts across two workspaces: only owners trigger; findings tied to the exact version; direct writes refused; Manager read in own workspace only; Admin/Reviewer/other workspace denied; no Knowledge Base leakage.
+- Regression: Phase 1–3 suites, browser check of submit → findings.
+- Acceptance: all six checks produce correct saved findings for real submissions; tests pass; no security regressions.
 
-People with several roles across workspaces get rights per workspace only.
+## Out of scope (later phases)
+AI review and resolving claims against facts, review screen decisions, approval workflow, comments, insights, AI transparency.
 
-## 5. Files and storage
-- New private bucket for content files, paths `<workspace_id>/<content_id>/<uuid>.<ext>`.
-- Upload rules: owner Creator in that workspace may upload into own content folder; read allowed to owner and to Managers once submitted; no public links; downloads via short-lived signed links from the server.
-- Server registers a file only after checking the path and the stored file's real size and type (same pattern as the Knowledge Base). Files belonging to past versions are kept.
-
-## 6. Pages and navigation
-- `/content` My Content (Creator), `/content/new` New Content (Creator), `/content/$id` detail and history, `/content/all` All Content (Manager).
-- Sidebar links unlock per role; locked pages show "Access required" like the Knowledge Base.
-- Calm enterprise styling consistent with existing pages; empty states, mobile layout.
-
-## 7. Server authorization and database security
-- Server functions (all authenticated): list own content, list workspace content (Manager), get content, save draft, submit, delete draft, register file, get file link, get history. Each checks membership and role first.
-- Database: `contents` and `content_versions` protected by row rules: owner Creator full access to own drafts; Manager read on non-draft rows in their workspace; nobody else. Versions are insert-only (no update/delete for anyone).
-- Database triggers: create a version on every content change, block edits once submitted, block changing workspace or owner, block status jumps not allowed in Phase 3, write audit log entries (created, saved, submitted, deleted, file uploaded).
-
-## 8. Testing and acceptance
-Automated:
-- Unit: form validation per type, character limits, HEX colours, file type/size, PDF-text confirmation rule, status-transition rules.
-- Live (temporary accounts across two workspaces, cleaned up afterwards, same method as Phase 2): Creator CRUD on own drafts; cannot read/edit others' drafts; cannot edit after submit; versions immutable; Manager reads submitted only, cannot write; Reviewer and Admin denied; cross-workspace read/update/delete/download denied by ID; server functions give the same results as the database rules.
-- Browser: create each type, save, edit (version 2), submit, history, Manager view, mobile, no console errors.
-
-Acceptance: all above pass; existing 45 tests and the Phase 2 security suite still pass; Knowledge Base unchanged; progress report written.
-
-## 9. Dependencies on later phases (not built now)
-- Automatic checks (banned terms, terminology, claims, contrast, alt text) — Phase 4: will read the exact content version; the colour and alt-text fields are captured now for it.
-- AI review and findings, accepting suggestions — later phase; will create new content versions using the versioning added now.
-- Routing to Manager/named Reviewer, approve/reject, comments, Review Queue, Insights — approval phase.
-
-## 10. Deferred items kept on record
-- Phase 1 one-hour session persistence: PENDING / DEFERRED.
-- 11 skipped Phase 1 live tests: still need the private test-account file.
-
-## Technical details
-- Tables: `contents` (id, workspace_id, owner_id, title, type enum text|image|pdf, channel, audience, goal, body_text, file_path, alt_text, text_color, background_color, status enum, version, submitted_at, timestamps) and `content_versions` (id, content_id, workspace_id, version_number, body_text, file_path, alt_text, colours, changed_by, change_summary, created_at; unique content_id+version_number). GRANTs, RLS, indexes on workspace/owner/status.
-- PDF extraction with `pdfjs-dist` loaded only in the browser after the page loads.
-- New `src/lib/content.ts` (schemas, pure transition rules) and `src/lib/content.functions.ts`; new rules recorded in AGENTS.md.
+## Still open from Phase 1
+One-hour session persistence (deferred) and 11 skipped Phase 1 live tests.
