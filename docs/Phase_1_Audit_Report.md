@@ -291,3 +291,20 @@ Email delivery and authentication workflows: PASSED. Phase 1 remains PENDING onl
 - One-hour session persistence: NOT PASSED YET (condition not met). The earliest current session began at 10:36 UTC (about 48 minutes ago); no session has reached one hour, and auth logs show no refresh-token renewal in the last 24 hours. Owner asked for PASS only if the session stayed authenticated after one hour and a refresh; that cannot have happened before about 11:36 UTC.
 - Regression tests: 28 passed, 0 failed, 11 skipped (live DB tests; no controlled fixture file).
 - Decision: PENDING. Sole blocker: one-hour session persistence with page refresh. Phase 2 not started.
+
+## Final Phase 1 acceptance audit (2026-11-05 11:26 UTC)
+| Check | Result | Evidence |
+|---|---|---|
+| Signup confirmation email | PASSED | Owner check + auth logs 11:13 |
+| Password-reset email, reset, new-password login | PASSED | Owner check + auth logs 11:14-11:16 |
+| Four roles, role dashboards/navigation | PASSED | Owner live checks |
+| Admin-only /users | PASSED | Owner live checks; server/database enforce admin-only |
+| Workspace selection and role display | PASSED | Owner live checks; 12 automated selector tests |
+| Role persistence after refresh/new login | PASSED | Owner live checks; stored roles unchanged in database |
+| One-hour session persistence | NOT VERIFIED | Earliest session 10:36 UTC (50 min); no refresh-token renewal in auth logs |
+| Regression tests | 28 passed, 0 failed, 11 skipped | vitest |
+
+Skipped tests (need a controlled test-account fixture file): 8 live database-authorization tests, 3 live profile-validation tests.
+Unverified: one-hour session persistence; skipped live DB tests (equivalent protections were checked live earlier as Admin).
+
+Decision: PENDING. Phase 2 not started; awaiting owner approval.
