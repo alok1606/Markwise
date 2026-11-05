@@ -12,7 +12,7 @@ const url = process.env['SUPABASE_URL'];
 const key = process.env['SUPABASE_PUBLISHABLE_KEY'];
 const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
 
-describe.skipIf(!fixturePath || !url || !key)('Live Phase 3 content security', () => {
+describe.skipIf(!fixturePath || !url || !key)('Live Phase 3 content security', { timeout: 60_000 }, () => {
   const c: Record<string, SupabaseClient> = {}; let A = ''; let B = '';
   const create = async (who: string, ws: string, type: 'text' | 'image' | 'pdf', body = 'Hello') => {
     const r = await c[who]!.rpc('create_content', { _workspace_id: ws, _type: type, _title: `${who} ${type}`, _channel: 'Web', _audience: '', _goal: '', _body_text: type === 'text' ? body : '', _alt_text: type === 'image' ? '' : null, _text_color: null, _background_color: null });
@@ -114,6 +114,16 @@ describe.skipIf(!fixturePath || !url || !key)('Live Phase 3 content security', (
     const id = await create('creator', A, 'text');
     expect((await c['creator']!.rpc('delete_content_draft', { _content_id: id })).error).toBeNull();
     expect(await read('creator', id)).toEqual([]);
+  });
+
+  it('creation, editing, submission and deletion are audited', async () => {
+    const id = await create('creator', A, 'text'); await save('creator', id, 1);
+    await c['creator']!.rpc('submit_content', { _content_id: id, _expected_version: 2 });
+    const d = await create('creator', A, 'text'); await c['creator']!.rpc('delete_content_draft', { _content_id: d });
+    const log = (await c['admin']!.from('audit_log').select('action,entity_id,user_id').in('entity_id', [id, d])).data ?? [];
+    expect(log.filter(l => l.entity_id === id).map(l => l.action).sort()).toEqual(['content_created', 'content_edited', 'content_submitted']);
+    expect(log.filter(l => l.entity_id === d).map(l => l.action).sort()).toEqual(['content_created', 'content_deleted']);
+    expect((await c['creator']!.from('audit_log').select('id').in('entity_id', [id, d])).data ?? []).toEqual([]);
   });
 
   it('the privileged file-registration function cannot be called by users', async () => {
