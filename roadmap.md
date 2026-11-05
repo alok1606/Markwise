@@ -3,6 +3,6 @@
 - [x] Workspace-isolated foundation, four roles, administrator management and secure navigation.
 - [x] Automated and browser verification; completion report with explicit limitations.
 - [x] Show the main screens after verification.
-- [ ] Promote the requesting user's account after their verified signup (requires account identification).
-- [ ] Verify real signup/reset email delivery and OAuth completion (requires real mailbox/provider interaction).
-- [ ] Resolve recoverable protected-redirect hydration warning (platform router behavior; final navigation works).
+- [ ] Finish first administrator setup after the requesting user's confirmed signup (owner identified; account confirmation required).
+- [ ] Finish signup/reset email delivery and Google/Lovable sign-in verification (requires real mailbox/provider interaction).
+- [x] Reproduce and resolve recoverable protected-redirect page-loading warning; all five signed-out workspace redirects verified without errors.

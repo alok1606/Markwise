@@ -13,11 +13,11 @@ import { credentialsSchema } from '@/lib/access';
 export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'forgot' | 'reset' }) {
   const { register, handleSubmit } = useForm<{ full_name: string; email: string; password: string; confirm: string }>();
   const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [busy, setBusy] = useState(false); const [show, setShow] = useState(false); const [recovery, setRecovery] = useState(false);
-  const { user } = useAuth(); const navigate = useNavigate();
+  const { user, recovery: recoverySession } = useAuth(); const navigate = useNavigate();
   useEffect(() => {
-    if (mode === 'reset') setRecovery(new URLSearchParams(window.location.hash.slice(1)).get('type') === 'recovery');
+    if (mode === 'reset') setRecovery(recoverySession);
     else if (user && (mode === 'login' || mode === 'signup')) void navigate({ to: '/dashboard', replace: true });
-  }, [user, mode, navigate]);
+  }, [user, recoverySession, mode, navigate]);
   const title = { login: 'Welcome back.', signup: 'Create your account.', forgot: 'Reset your password.', reset: 'Set a new password.' }[mode];
   async function submit(values: { full_name: string; email: string; password: string; confirm: string }) {
     setBusy(true); setError(''); setSuccess('');

@@ -6,7 +6,9 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  ClientOnly,
   type ErrorComponentProps,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -118,11 +120,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const protectedPage = useRouterState({ select: state => state.matches.some(match => match.routeId === '/_authenticated') });
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <AuthProvider><Outlet /><Toaster /></AuthProvider>
+      <AuthProvider>{protectedPage ? <ClientOnly><Outlet /></ClientOnly> : <Outlet />}<Toaster /></AuthProvider>
     </QueryClientProvider>
   );
 }

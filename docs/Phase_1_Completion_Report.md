@@ -26,7 +26,7 @@ Latest platform build diagnostic: **build OK**. No production deployment was mad
 - Public signup with a reserved `example.com` test address was correctly rejected. End-to-end signup email delivery/confirmation needs a real mailbox; it has not been verified.
 - Password reset request and recovery forms are implemented, but email delivery and complete recovery-link password update remain unverified. A controlled recovery-link generation attempt was blocked by the environment's session-consent policy and was not bypassed.
 - Google/Lovable providers were enabled, but interactive external OAuth completion remains unverified.
-- Signed-out hard navigation to protected pages redirects correctly, but local preview emits recoverable TanStack `MatchView` hydration warnings during that redirect. No blank final screen was observed; the warning is unresolved.
+- Resolved on November 5, 2026: signed-out hard navigation to all five protected workspace pages now redirects to sign-in without console or page errors. The root waits for client initialization only for protected-page rendering; public pages retain server rendering and the existing authentication gate is unchanged. Signed-in verification awaits a real account.
 - Concurrent last-administrator races were not tested; the role-assignment function locks the workspace row.
 - Phase 2 features are intentionally absent. Future sidebar entries are visibly unavailable rather than fake working pages. Demo access requires provisioned accounts; brand seed data was not added.
 
@@ -54,3 +54,13 @@ Run `bunx vitest run` for local tests. Live database tests are opt-in: set `MARK
 
 ## Architecture
 The platform's existing TanStack Router/Start setup was preserved rather than introducing React Router or unsupported Edge Functions. App operations use authenticated server functions and workspace-authorized database functions; privileged account provisioning is not exposed as a public endpoint. No AI, content submission, knowledge-base logic or approval workflow was implemented.
+
+## Remaining-items recheck — November 5, 2026
+- Owner identified the desired first administrator email; no matching auth account existed at the final inspection. Promotion remains blocked by signup and confirmation. No account was created, confirmed, or promoted on the owner's behalf.
+- Actual hosted auth settings returned HTTP 200: email/password and Google are enabled, public signup is enabled, anonymous signup is disabled, and email confirmation is required. Preview and recovery return paths are in the hosted allow-list.
+- Both Google and Lovable buttons were clicked in the browser; requests to the managed sign-in broker carried the right provider and public same-origin return address. These requests were intercepted for inspection, not completed with external providers. This does not establish successful OAuth completion or Lovable's hosted provider status.
+- No managed email events were visible for today. Receipt, confirmation-link completion, and reset-email recovery still require the owner's mailbox interaction.
+- Corrected password recovery to depend on the shared `PASSWORD_RECOVERY` event rather than a URL fragment the auth SDK may already have removed. A retained regression test verifies recognition after fragment removal and cleanup on sign-out; the browser verifies direct reset-page visits cannot update a password without recovery.
+- Current local tests: **9 passed, 8 live database tests skipped** because controlled account fixtures are unavailable. Prior live results above are historical, not a fresh live run.
+- Router maintenance updates were evaluated and rolled back; no dependency/version changes are retained.
+- Latest observed platform diagnostic: **build OK**. Full signed-in administrator/recovery/social flows remain blocked on real account/provider interaction; Phase 1 is not declared complete.

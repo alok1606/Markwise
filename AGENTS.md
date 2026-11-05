@@ -17,3 +17,5 @@
 - Keep workspace membership and roles separate; mutations use authenticated database functions with workspace authorization and audit writes to prevent client privilege escalation.
 - Public signup provisions only a creator workspace; first administrator promotion is an explicit owner-authorized operation outside public app endpoints.
 - Store avatars privately under user-ID paths with owner-only storage policies; resolve temporary signed URLs for display.
+- Defer the root outlet to ClientOnly only while protected routes are matched; this prevents redirect hydration races while preserving public SSR and the managed auth gate.
+- Track password recovery in the shared auth event subscriber; the auth SDK may consume recovery URL fragments before the form renders.
