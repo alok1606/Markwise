@@ -91,6 +91,79 @@ export type Database = {
           },
         ]
       }
+      approvals: {
+        Row: {
+          ai_state_at_routing: string
+          assigned_by: string
+          content_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_comment: string | null
+          id: string
+          reviewer_id: string | null
+          route: string
+          status: string
+          version_id: string
+          version_number: number
+          workspace_id: string
+        }
+        Insert: {
+          ai_state_at_routing: string
+          assigned_by: string
+          content_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          id?: string
+          reviewer_id?: string | null
+          route: string
+          status?: string
+          version_id: string
+          version_number: number
+          workspace_id: string
+        }
+        Update: {
+          ai_state_at_routing?: string
+          assigned_by?: string
+          content_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          id?: string
+          reviewer_id?: string | null
+          route?: string
+          status?: string
+          version_id?: string
+          version_number?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approvals_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approvals_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "content_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approvals_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -315,6 +388,58 @@ export type Database = {
             foreignKeyName: "brand_profiles_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          author_id: string
+          content_id: string
+          created_at: string
+          id: string
+          message: string
+          parent_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          author_id: string
+          content_id: string
+          created_at?: string
+          id?: string
+          message: string
+          parent_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          author_id?: string
+          content_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          parent_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -589,6 +714,84 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "facts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finding_actions: {
+        Row: {
+          action: string
+          actor_id: string
+          content_id: string
+          created_at: string
+          final_text: string | null
+          finding_id: string
+          id: string
+          reason: string | null
+          result_version_id: string | null
+          version_id: string
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          content_id: string
+          created_at?: string
+          final_text?: string | null
+          finding_id: string
+          id?: string
+          reason?: string | null
+          result_version_id?: string | null
+          version_id: string
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          content_id?: string
+          created_at?: string
+          final_text?: string | null
+          finding_id?: string
+          id?: string
+          reason?: string | null
+          result_version_id?: string | null
+          version_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finding_actions_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finding_actions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: true
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finding_actions_result_version_id_fkey"
+            columns: ["result_version_id"]
+            isOneToOne: false
+            referencedRelation: "content_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finding_actions_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "content_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finding_actions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1118,6 +1321,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      act_on_finding: {
+        Args: {
+          _action: string
+          _actor: string
+          _content_id: string
+          _expected_version: number
+          _final_text: string
+          _finding_id: string
+          _new_body: string
+          _reason: string
+        }
+        Returns: number
+      }
+      add_comment: {
+        Args: { _content_id: string; _message: string; _parent_id: string }
+        Returns: string
+      }
       add_workspace_member_by_email: {
         Args: {
           _email: string
@@ -1126,6 +1346,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      ai_state: { Args: { _version_id: string }; Returns: string }
+      approval_route_facts: { Args: { _content_id: string }; Returns: Json }
       can_read_content: { Args: { _content_id: string }; Returns: boolean }
       can_read_content_file: { Args: { _name: string }; Returns: boolean }
       can_upload_content_file: { Args: { _name: string }; Returns: boolean }
@@ -1176,6 +1398,15 @@ export type Database = {
         }
         Returns: string
       }
+      decide_approval: {
+        Args: {
+          _approval_id: string
+          _comment: string
+          _decision: string
+          _expected_version: number
+        }
+        Returns: undefined
+      }
       delete_content_draft: {
         Args: { _content_id: string }
         Returns: undefined
@@ -1188,6 +1419,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_assigned_reviewer: { Args: { _content_id: string }; Returns: boolean }
       is_workspace_member: { Args: { _workspace_id: string }; Returns: boolean }
       kb_storage_workspace: { Args: { _name: string }; Returns: string }
       load_demo_knowledge: {
@@ -1274,6 +1506,14 @@ export type Database = {
         Args: { _content_id: string; _expected_version: number }
         Returns: undefined
       }
+      submit_for_approval: {
+        Args: {
+          _content_id: string
+          _expected_version: number
+          _reviewer_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "creator" | "manager" | "reviewer" | "admin"
@@ -1284,6 +1524,9 @@ export type Database = {
         | "approved"
         | "rejected"
         | "changes_requested"
+        | "checked"
+        | "pending_manager"
+        | "pending_reviewer"
       content_type: "text" | "image" | "pdf"
       fact_status: "pending" | "approved" | "rejected" | "expired"
       rule_category:
@@ -1431,6 +1674,9 @@ export const Constants = {
         "approved",
         "rejected",
         "changes_requested",
+        "checked",
+        "pending_manager",
+        "pending_reviewer",
       ],
       content_type: ["text", "image", "pdf"],
       fact_status: ["pending", "approved", "rejected", "expired"],
