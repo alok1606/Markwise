@@ -83,6 +83,7 @@
 
 ## Round 2 polish (requested 5 Nov 2026)
 - [x] Task 1 + 1b done (dashboard next steps, Insights removed from menu)
-- [ ] Remaining: reviewer name, demo, README, live check, Activity, AI-call log, AI page; awaiting owner approval
+- [x] Task 2: kept "Workspace member" (privacy); Task 3 demo run done, /demo page rewritten
+- [ ] Remaining: README, demo, README, live check, Activity, AI-call log, AI page; awaiting owner approval
 - [x] Owner approved tasks 1, 1b, 3, 4, 5, 6, 7, 8, 9; task 2 only if privacy-safe without changing rules
 - [x] Hackathon name confirmed: CodeNexus India 2026
