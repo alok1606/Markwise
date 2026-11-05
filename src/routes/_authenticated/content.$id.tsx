@@ -19,6 +19,9 @@ import { FindingsPanel, Highlighted } from '@/components/content/findings-panel'
 import { ApprovalHistory, CommentsThread, DecisionPanel, FindingResolution, SendForApproval, type ActionRow, type ApprovalRow } from '@/components/content/review-actions';
 import type { Decision } from '@/lib/approval';
 import { meta } from '@/lib/access';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ActivityTimeline } from '@/components/content/activity-timeline';
+import { buildActivity } from '@/lib/activity';
 
 export const Route = createFileRoute('/_authenticated/content/$id')({ head: () => meta('Content review', 'Content, findings, approval and version history.'), component: ContentDetail });
 
@@ -129,8 +132,13 @@ function ContentDetail() {
     {editable && <div className="mt-6">{type === 'image' && file_url && <img src={file_url} alt={c.alt_text || ''} className="mb-4 max-h-72 rounded-md border" />}
       <ContentEditor key={c.version} workspaceId={ws.id} existing={{ id: c.id, version: c.version, type, file_name: c.file_name, fields: { title: c.title, channel: c.channel, audience: c.audience, goal: c.goal, body_text: c.body_text, alt_text: c.alt_text, text_color: c.text_color, background_color: c.background_color } }} onSaved={() => void refresh()} />
       {status === 'changes_requested' && <><ApprovalHistory approvals={approvals as ApprovalRow[]} names={names} /><CommentsThread comments={comments} names={names} canComment busy={busy} onPost={post} /></>}</div>}
-    <section className="mt-8"><h2 className="text-lg font-semibold">Version history</h2><p className="text-sm text-muted-foreground">Every saved version is kept and cannot be changed.</p>
-      <ol className="mt-4 divide-y rounded-lg border bg-card">{versions.map(v => <li key={v.id} className="flex flex-wrap items-center gap-3 p-4 text-sm"><span className="font-medium">v{v.version_number}</span><span className="text-muted-foreground">{v.change_summary} · {new Date(v.created_at).toLocaleString()}</span><span className="min-w-0 flex-1 truncate">{v.title}{v.file_name ? ` · ${v.file_name}` : ''}</span>{v.file_path && <Button size="sm" variant="ghost" onClick={() => void download(v.id)}><Download />File</Button>}</li>)}</ol></section>
+    <Tabs defaultValue="versions" className="mt-8">
+      <TabsList><TabsTrigger value="versions">Version history</TabsTrigger><TabsTrigger value="activity">Activity</TabsTrigger></TabsList>
+      <TabsContent value="versions"><p className="text-sm text-muted-foreground">Every saved version is kept and cannot be changed.</p>
+        <ol className="mt-4 divide-y rounded-lg border bg-card">{versions.map(v => <li key={v.id} className="flex flex-wrap items-center gap-3 p-4 text-sm"><span className="font-medium">v{v.version_number}</span><span className="text-muted-foreground">{v.change_summary} · {new Date(v.created_at).toLocaleString()}</span><span className="min-w-0 flex-1 truncate">{v.title}{v.file_name ? ` · ${v.file_name}` : ''}</span>{v.file_path && <Button size="sm" variant="ghost" onClick={() => void download(v.id)}><Download />File</Button>}</li>)}</ol></TabsContent>
+      <TabsContent value="activity"><p className="mb-4 text-sm text-muted-foreground">Everything that happened to this content, newest first.</p>
+        <ActivityTimeline events={buildActivity({ versions, actions: actions as ActionRow[], approvals: approvals as ApprovalRow[], comments, names, ownerId: c.owner_id, ownerName: owner_name, userId: user_id })} /></TabsContent>
+    </Tabs>
     <AlertDialog open={!!confirm} onOpenChange={o => !o && setConfirm(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirm === 'submit' ? 'Submit this content?' : 'Delete this draft?'}</AlertDialogTitle><AlertDialogDescription>{confirm === 'submit' ? 'After submitting, you can no longer edit or delete it.' : 'The draft is removed from your list. Its saved versions are kept for the record.'}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={act}>{confirm === 'submit' ? 'Submit' : 'Delete'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </>;
 }
