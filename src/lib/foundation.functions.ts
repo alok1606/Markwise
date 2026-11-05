@@ -23,7 +23,13 @@ export const getMembers = createServerFn({ method: 'GET' }).middleware([requireS
   if (check.error || !check.data) throw new Error('Only workspace administrators can view members');
   const members = await context.supabase.from('workspace_members').select('user_id,created_at,profiles(id,full_name,email),user_roles(role)').eq('workspace_id', data.workspace_id);
   if (members.error) throw new Error(members.error.message);
-  return members.data;
+  return members.data.map(member => {
+    const relation: unknown = member.user_roles;
+    const roleRecord = Array.isArray(relation) ? relation[0] : relation;
+    const parsed = roleSchema.safeParse((roleRecord as { role?: unknown } | null)?.role);
+    if (!parsed.success) throw new Error('Member role unavailable');
+    return { ...member, user_roles: [{ role: parsed.data }] };
+  });
 });
 export const assignRole = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(workspaceSchema.extend({ user_id: z.string().uuid(), role: roleSchema })).handler(async ({ data, context }) => {
   const { error } = await context.supabase.rpc('manage_workspace_member', { _workspace_id: data.workspace_id, _user_id: data.user_id, _role: data.role });

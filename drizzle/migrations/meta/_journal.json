@@ -8,6 +8,13 @@
       "when": 1793869829065,
       "tag": "0000_markwise_phase1_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793870334435,
+      "tag": "0001_restrict_foundation_grants",
+      "breakpoints": true
     }
   ]
 }

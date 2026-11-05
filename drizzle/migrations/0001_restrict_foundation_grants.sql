@@ -1,0 +1,6 @@
+REVOKE ALL ON public.profiles,public.workspaces,public.workspace_members,public.user_roles,public.audit_log FROM anon,authenticated;
+GRANT SELECT ON public.profiles,public.workspaces,public.workspace_members,public.user_roles,public.audit_log TO authenticated;
+GRANT UPDATE(full_name,avatar_url) ON public.profiles TO authenticated;
+CREATE FUNCTION public.validate_profile_fields() RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$ BEGIN IF length(trim(new.full_name))>100 THEN RAISE EXCEPTION 'Name must be at most 100 characters'; END IF; IF new.avatar_url IS NOT NULL AND (split_part(new.avatar_url,'/',1)<>new.id::text OR new.avatar_url !~ '^[a-zA-Z0-9_/-]+\.(png|jpg|jpeg|webp)$') THEN RAISE EXCEPTION 'Invalid avatar path'; END IF; IF auth.uid() IS NOT NULL AND new.email IS DISTINCT FROM old.email THEN RAISE EXCEPTION 'Account email cannot be changed through profile settings'; END IF; RETURN new; END $$;
+REVOKE ALL ON FUNCTION public.validate_profile_fields() FROM PUBLIC,anon,authenticated;
+CREATE TRIGGER validate_profile_fields BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.validate_profile_fields();
