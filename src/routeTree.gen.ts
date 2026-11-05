@@ -18,9 +18,17 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedHelpRouteImport } from './routes/_authenticated/help'
+import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedKnowledgeIndexRouteImport } from './routes/_authenticated/knowledge.index'
+import { Route as AuthenticatedKnowledgeFactsRouteImport } from './routes/_authenticated/knowledge.facts'
+import { Route as AuthenticatedKnowledgeGlossaryRouteImport } from './routes/_authenticated/knowledge.glossary'
+import { Route as AuthenticatedKnowledgeGuidelinesRouteImport } from './routes/_authenticated/knowledge.guidelines'
+import { Route as AuthenticatedKnowledgeProfileRouteImport } from './routes/_authenticated/knowledge.profile'
+import { Route as AuthenticatedKnowledgeRulesRouteImport } from './routes/_authenticated/knowledge.rules'
+import { Route as AuthenticatedKnowledgeVisualRouteImport } from './routes/_authenticated/knowledge.visual'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -66,6 +74,11 @@ const AuthenticatedHelpRoute = AuthenticatedHelpRouteImport.update({
   path: '/help',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedKnowledgeRoute = AuthenticatedKnowledgeRouteImport.update({
+  id: '/knowledge',
+  path: '/knowledge',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -81,6 +94,48 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedKnowledgeIndexRoute =
+  AuthenticatedKnowledgeIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedKnowledgeRoute,
+  } as any)
+const AuthenticatedKnowledgeFactsRoute =
+  AuthenticatedKnowledgeFactsRouteImport.update({
+    id: '/facts',
+    path: '/facts',
+    getParentRoute: () => AuthenticatedKnowledgeRoute,
+  } as any)
+const AuthenticatedKnowledgeGlossaryRoute =
+  AuthenticatedKnowledgeGlossaryRouteImport.update({
+    id: '/glossary',
+    path: '/glossary',
+    getParentRoute: () => AuthenticatedKnowledgeRoute,
+  } as any)
+const AuthenticatedKnowledgeGuidelinesRoute =
+  AuthenticatedKnowledgeGuidelinesRouteImport.update({
+    id: '/guidelines',
+    path: '/guidelines',
+    getParentRoute: () => AuthenticatedKnowledgeRoute,
+  } as any)
+const AuthenticatedKnowledgeProfileRoute =
+  AuthenticatedKnowledgeProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedKnowledgeRoute,
+  } as any)
+const AuthenticatedKnowledgeRulesRoute =
+  AuthenticatedKnowledgeRulesRouteImport.update({
+    id: '/rules',
+    path: '/rules',
+    getParentRoute: () => AuthenticatedKnowledgeRoute,
+  } as any)
+const AuthenticatedKnowledgeVisualRoute =
+  AuthenticatedKnowledgeVisualRouteImport.update({
+    id: '/visual',
+    path: '/visual',
+    getParentRoute: () => AuthenticatedKnowledgeRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -91,9 +146,17 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/help': typeof AuthenticatedHelpRoute
+  '/knowledge': typeof AuthenticatedKnowledgeRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/knowledge/facts': typeof AuthenticatedKnowledgeFactsRoute
+  '/knowledge/glossary': typeof AuthenticatedKnowledgeGlossaryRoute
+  '/knowledge/guidelines': typeof AuthenticatedKnowledgeGuidelinesRoute
+  '/knowledge/profile': typeof AuthenticatedKnowledgeProfileRoute
+  '/knowledge/rules': typeof AuthenticatedKnowledgeRulesRoute
+  '/knowledge/visual': typeof AuthenticatedKnowledgeVisualRoute
+  '/knowledge/': typeof AuthenticatedKnowledgeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +170,13 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/knowledge/facts': typeof AuthenticatedKnowledgeFactsRoute
+  '/knowledge/glossary': typeof AuthenticatedKnowledgeGlossaryRoute
+  '/knowledge/guidelines': typeof AuthenticatedKnowledgeGuidelinesRoute
+  '/knowledge/profile': typeof AuthenticatedKnowledgeProfileRoute
+  '/knowledge/rules': typeof AuthenticatedKnowledgeRulesRoute
+  '/knowledge/visual': typeof AuthenticatedKnowledgeVisualRoute
+  '/knowledge': typeof AuthenticatedKnowledgeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -119,9 +189,17 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/help': typeof AuthenticatedHelpRoute
+  '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRouteWithChildren
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/_authenticated/knowledge/facts': typeof AuthenticatedKnowledgeFactsRoute
+  '/_authenticated/knowledge/glossary': typeof AuthenticatedKnowledgeGlossaryRoute
+  '/_authenticated/knowledge/guidelines': typeof AuthenticatedKnowledgeGuidelinesRoute
+  '/_authenticated/knowledge/profile': typeof AuthenticatedKnowledgeProfileRoute
+  '/_authenticated/knowledge/rules': typeof AuthenticatedKnowledgeRulesRoute
+  '/_authenticated/knowledge/visual': typeof AuthenticatedKnowledgeVisualRoute
+  '/_authenticated/knowledge/': typeof AuthenticatedKnowledgeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -134,9 +212,17 @@ export interface FileRouteTypes {
     | '/signup'
     | '/dashboard'
     | '/help'
+    | '/knowledge'
     | '/profile'
     | '/settings'
     | '/users'
+    | '/knowledge/facts'
+    | '/knowledge/glossary'
+    | '/knowledge/guidelines'
+    | '/knowledge/profile'
+    | '/knowledge/rules'
+    | '/knowledge/visual'
+    | '/knowledge/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +236,13 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/users'
+    | '/knowledge/facts'
+    | '/knowledge/glossary'
+    | '/knowledge/guidelines'
+    | '/knowledge/profile'
+    | '/knowledge/rules'
+    | '/knowledge/visual'
+    | '/knowledge'
   id:
     | '__root__'
     | '/'
@@ -161,9 +254,17 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/dashboard'
     | '/_authenticated/help'
+    | '/_authenticated/knowledge'
     | '/_authenticated/profile'
     | '/_authenticated/settings'
     | '/_authenticated/users'
+    | '/_authenticated/knowledge/facts'
+    | '/_authenticated/knowledge/glossary'
+    | '/_authenticated/knowledge/guidelines'
+    | '/_authenticated/knowledge/profile'
+    | '/_authenticated/knowledge/rules'
+    | '/_authenticated/knowledge/visual'
+    | '/_authenticated/knowledge/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -241,6 +342,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHelpRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/knowledge': {
+      id: '/_authenticated/knowledge'
+      path: '/knowledge'
+      fullPath: '/knowledge'
+      preLoaderRoute: typeof AuthenticatedKnowledgeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -262,12 +370,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/knowledge/': {
+      id: '/_authenticated/knowledge/'
+      path: '/'
+      fullPath: '/knowledge/'
+      preLoaderRoute: typeof AuthenticatedKnowledgeIndexRouteImport
+      parentRoute: typeof AuthenticatedKnowledgeRoute
+    }
+    '/_authenticated/knowledge/facts': {
+      id: '/_authenticated/knowledge/facts'
+      path: '/facts'
+      fullPath: '/knowledge/facts'
+      preLoaderRoute: typeof AuthenticatedKnowledgeFactsRouteImport
+      parentRoute: typeof AuthenticatedKnowledgeRoute
+    }
+    '/_authenticated/knowledge/glossary': {
+      id: '/_authenticated/knowledge/glossary'
+      path: '/glossary'
+      fullPath: '/knowledge/glossary'
+      preLoaderRoute: typeof AuthenticatedKnowledgeGlossaryRouteImport
+      parentRoute: typeof AuthenticatedKnowledgeRoute
+    }
+    '/_authenticated/knowledge/guidelines': {
+      id: '/_authenticated/knowledge/guidelines'
+      path: '/guidelines'
+      fullPath: '/knowledge/guidelines'
+      preLoaderRoute: typeof AuthenticatedKnowledgeGuidelinesRouteImport
+      parentRoute: typeof AuthenticatedKnowledgeRoute
+    }
+    '/_authenticated/knowledge/profile': {
+      id: '/_authenticated/knowledge/profile'
+      path: '/profile'
+      fullPath: '/knowledge/profile'
+      preLoaderRoute: typeof AuthenticatedKnowledgeProfileRouteImport
+      parentRoute: typeof AuthenticatedKnowledgeRoute
+    }
+    '/_authenticated/knowledge/rules': {
+      id: '/_authenticated/knowledge/rules'
+      path: '/rules'
+      fullPath: '/knowledge/rules'
+      preLoaderRoute: typeof AuthenticatedKnowledgeRulesRouteImport
+      parentRoute: typeof AuthenticatedKnowledgeRoute
+    }
+    '/_authenticated/knowledge/visual': {
+      id: '/_authenticated/knowledge/visual'
+      path: '/visual'
+      fullPath: '/knowledge/visual'
+      preLoaderRoute: typeof AuthenticatedKnowledgeVisualRouteImport
+      parentRoute: typeof AuthenticatedKnowledgeRoute
+    }
   }
 }
+
+interface AuthenticatedKnowledgeRouteChildren {
+  AuthenticatedKnowledgeFactsRoute: typeof AuthenticatedKnowledgeFactsRoute
+  AuthenticatedKnowledgeGlossaryRoute: typeof AuthenticatedKnowledgeGlossaryRoute
+  AuthenticatedKnowledgeGuidelinesRoute: typeof AuthenticatedKnowledgeGuidelinesRoute
+  AuthenticatedKnowledgeProfileRoute: typeof AuthenticatedKnowledgeProfileRoute
+  AuthenticatedKnowledgeRulesRoute: typeof AuthenticatedKnowledgeRulesRoute
+  AuthenticatedKnowledgeVisualRoute: typeof AuthenticatedKnowledgeVisualRoute
+  AuthenticatedKnowledgeIndexRoute: typeof AuthenticatedKnowledgeIndexRoute
+}
+
+const AuthenticatedKnowledgeRouteChildren: AuthenticatedKnowledgeRouteChildren =
+  {
+    AuthenticatedKnowledgeFactsRoute: AuthenticatedKnowledgeFactsRoute,
+    AuthenticatedKnowledgeGlossaryRoute: AuthenticatedKnowledgeGlossaryRoute,
+    AuthenticatedKnowledgeGuidelinesRoute:
+      AuthenticatedKnowledgeGuidelinesRoute,
+    AuthenticatedKnowledgeProfileRoute: AuthenticatedKnowledgeProfileRoute,
+    AuthenticatedKnowledgeRulesRoute: AuthenticatedKnowledgeRulesRoute,
+    AuthenticatedKnowledgeVisualRoute: AuthenticatedKnowledgeVisualRoute,
+    AuthenticatedKnowledgeIndexRoute: AuthenticatedKnowledgeIndexRoute,
+  }
+
+const AuthenticatedKnowledgeRouteWithChildren =
+  AuthenticatedKnowledgeRoute._addFileChildren(
+    AuthenticatedKnowledgeRouteChildren,
+  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHelpRoute: typeof AuthenticatedHelpRoute
+  AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRouteWithChildren
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
@@ -276,6 +461,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHelpRoute: AuthenticatedHelpRoute,
+  AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRouteWithChildren,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
