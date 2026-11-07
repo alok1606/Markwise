@@ -11,7 +11,7 @@ Markwise is a **team-designed and team-directed software engineering project** �
 ## 1. Main features (implemented, Phases 1–6)
 
 - **Accounts and workspaces** – email/password sign-up with email verification, password reset, Google sign-in, private profile photos, one workspace per new sign-up.
-- **Knowledge base (Admin only)** – brand rules, approved facts (with approval and history), glossary, legal wording, tone guidance, reference files, and a one-click Nimbus Onboard demo knowledge set.
+- **Knowledge base (Admin only)** – brand rules, approved facts (with approval and history), glossary, legal wording, tone guidance, reference files, and a one-click AKS Company demo knowledge set.
 - **Content** – create text, image and PDF content; every save creates a new immutable version; server-assigned version numbers; stale-edit protection; submitted content is locked.
 - **Automatic checks** – six deterministic checks (e.g. banned terms, avoided glossary terms, unverified numbers, image colours) run on the exact submitted version.
 - **AI review** – a separate AI review whose output is validated before being shown (see section 6).
@@ -101,7 +101,7 @@ npm test
 
 - **Unit/component tests** (`src/test/*.test.ts(x)` without `-live`) – checks, AI validation, approval logic, access rules, routing, auth forms, workspace selection. Run everywhere.
 - **Live security tests** (`*-live.test.ts`, `database-security.test.ts`) – create temporary accounts in two workspaces and test row-level security, storage and cross-workspace isolation against the real backend, then clean up.
-- **Browser acceptance tests** – Playwright runs performed during development (e.g. PDF checking, the full Creator → Reviewer → Manager flow, the Nimbus demo). Evidence is in `docs/` (see `docs/Nimbus_Demo_E2E_Report.md`). These scripts are not part of `npm test`.
+- **Browser acceptance tests** – Playwright runs performed during development (e.g. PDF checking, the full Creator → Reviewer → Manager flow, and the demo walkthrough). Evidence is in `docs/` (see the historical `docs/Nimbus_Demo_E2E_Report.md`). These scripts are not part of `npm test`.
 
 **Skipped tests, honestly:** the live tests are written with `describe.skipIf(...)` and are **skipped automatically** when the fixture file or backend keys are not present – which is the case on a normal clone, because the service key is not available outside the managed environment. A run that reports them as skipped has **not** tested security; they were run with fixtures during each phase's acceptance (results in the `docs/Phase_*` reports).
 

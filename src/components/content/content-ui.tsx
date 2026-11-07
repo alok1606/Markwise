@@ -7,7 +7,18 @@ export function AccessRequired({ message }: { message: string }) {
   return <><LockKeyhole className="size-8 text-primary" /><h1 className="mt-5 text-2xl font-semibold">Access required</h1><p className="mt-3 text-muted-foreground">{message}</p></>;
 }
 export function StatusBadge({ status }: { status: ContentStatus }) {
-  return <Badge variant={status === 'draft' ? 'outline' : 'secondary'}>{statusLabel[status]}</Badge>;
+  const tone: Record<ContentStatus, string> = {
+    draft: 'border-slate-200 bg-slate-50 text-slate-700',
+    submitted: 'border-blue-200 bg-blue-50 text-blue-800',
+    checked: 'border-teal-200 bg-teal-50 text-teal-800',
+    pending_manager: 'border-indigo-200 bg-indigo-50 text-indigo-800',
+    pending_reviewer: 'border-indigo-200 bg-indigo-50 text-indigo-800',
+    in_review: 'border-sky-200 bg-sky-50 text-sky-800',
+    approved: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    rejected: 'border-rose-200 bg-rose-50 text-rose-800',
+    changes_requested: 'border-amber-200 bg-amber-50 text-amber-800',
+  };
+  return <Badge variant="outline" className={tone[status]}>{statusLabel[status]}</Badge>;
 }
 export const TypeIcon = ({ type }: { type: ContentType }) => type === 'text' ? <Type className="size-4 text-primary" /> : type === 'image' ? <ImageIcon className="size-4 text-primary" /> : <FileText className="size-4 text-primary" />;
 

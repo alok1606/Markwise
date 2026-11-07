@@ -8,8 +8,8 @@ and nothing is published until a human approves it.
 
 Four demo accounts are provided (credentials are shared privately with the
 submission, never in this repository). Each account has exactly one role in a
-dedicated demo workspace, **Judge Demo — Nimbus Onboard**, filled with fictional
-demo data. Nimbus Onboard is an imaginary company; all demo records are labelled
+dedicated demo workspace, **Judge Demo — AKS Company**, filled with fictional
+demo data. AKS Company is an imaginary company; all demo records are labelled
 as fictional.
 
 ## The four accounts
@@ -64,7 +64,7 @@ as fictional.
 - **Humans decide:** the system never approves, rejects or publishes anything by
   itself.
 - Each account also has an empty personal workspace (created automatically on
-  first provisioning) — please stay in **Judge Demo — Nimbus Onboard** for the
+  first provisioning) — please stay in **Judge Demo — AKS Company** for the
   demo.
 
 ## After judging

@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowRight, Eye, EyeOff, Gavel, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AksWordmark } from '@/components/aks-wordmark';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Brand } from './brand';
@@ -10,6 +11,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable';
 import { useAuth } from './auth-provider';
 import { credentialsSchema } from '@/lib/access';
+
+const judgeDemoAccounts = [
+  { role: 'Creator', email: 'salok3191+judge.creator@gmail.com', password: 'Jd!5dc512244d084531a284e344def5c756x', tone: 'border-blue-200 bg-blue-50 text-blue-800' },
+  { role: 'Manager', email: 'salok3191+judge.manager@gmail.com', password: 'Jd!6398f0c556f64ff58414c04540bd760bx', tone: 'border-violet-200 bg-violet-50 text-violet-800' },
+  { role: 'Reviewer', email: 'salok3191+judge.reviewer@gmail.com', password: 'Jd!7b4a44c21592421281b23c51e3de5b02x', tone: 'border-teal-200 bg-teal-50 text-teal-800' },
+  { role: 'Admin', email: 'salok3191+judge.admin@gmail.com', password: 'Jd!232ce6444a354edd95aa88d8351cb005x', tone: 'border-amber-200 bg-amber-50 text-amber-800' },
+] as const;
+
 export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'forgot' | 'reset' }) {
   const { register, handleSubmit } = useForm<{ full_name: string; email: string; password: string; confirm: string }>();
   const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [busy, setBusy] = useState(false); const [show, setShow] = useState(false); const [recovery, setRecovery] = useState(false);
@@ -51,8 +60,18 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'forgot' | 'rese
       <div className="flex items-center gap-2"><Gavel className="h-4 w-4 text-primary" /><h2 className="text-sm font-semibold">Hackathon Judges — Demo Access</h2></div>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">Welcome, CodeNexus India 2026 judges! Explore Markwise using our dedicated Judge Demo environment.</p>
       <div className="mt-3 flex flex-wrap gap-1.5">{['Creator', 'Manager', 'Reviewer', 'Admin'].map(r => <span key={r} className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium">{r}</span>)}</div>
-      <p className="mt-3 text-xs text-muted-foreground">Demo Workspace: <span className="font-medium text-foreground">Judge Demo — Nimbus Onboard</span></p>
-      <p className="mt-3 rounded-md border border-primary/30 bg-background p-2.5 text-xs font-medium">Please use the demo credentials provided in the private hackathon submission.</p>
+      <p className="mt-3 flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">Demo Workspace: <span className="font-medium text-foreground">Judge Demo — <AksWordmark compact /></span></p>
+      <div className="mt-4 space-y-2.5" aria-label="Judge evaluation sign-in credentials">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground">Evaluation sign-in credentials</p>
+        {judgeDemoAccounts.map(({ role, email, password, tone }) => <div key={role} className="rounded-lg border border-border bg-background p-3">
+          <div className="flex items-center justify-between gap-3"><span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${tone}`}>{role}</span><span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Demo account</span></div>
+          <dl className="mt-2 grid gap-1.5 text-xs sm:grid-cols-[4.25rem_minmax(0,1fr)] sm:gap-x-2">
+            <dt className="font-medium text-muted-foreground">Email</dt><dd className="min-w-0 break-all font-medium text-foreground">{email}</dd>
+            <dt className="font-medium text-muted-foreground">Password</dt><dd className="min-w-0 break-all font-mono text-foreground">{password}</dd>
+          </dl>
+        </div>)}
+      </div>
+      <p role="note" className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950"><span className="font-semibold">Evaluation use only.</span> These demo credentials are shown here only for evaluation and access an isolated demo workspace. Do not use them for personal or production accounts.</p>
       <p className="mt-2 text-xs leading-5 text-muted-foreground">Each role provides a different view of Markwise&rsquo;s brand governance and approval workflow.</p>
     </section>}
     {(mode === 'login' || mode === 'signup') && <><Button className="w-full" variant="outline" disabled={busy} onClick={signInWithGoogle}>Continue with Google</Button><div className="my-6 flex items-center gap-4 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />or continue with email<span className="h-px flex-1 bg-border" /></div></>}

@@ -48,7 +48,7 @@ describe('Visual identity and profile', () => {
     expect(paletteSchema.safeParse({ name: 'Navy', hex: '#123', usage_note: '' }).success).toBe(false);
   });
   it('requires a brand name and a full website address', () => {
-    const base = { brand_name: 'Nimbus Onboard', description: '', industry: '', website: '', target_audience: '', mission: '', positioning: '' };
+    const base = { brand_name: 'AKS Company', description: '', industry: '', website: '', target_audience: '', mission: '', positioning: '' };
     expect(brandProfileSchema.safeParse(base).success).toBe(true);
     expect(brandProfileSchema.safeParse({ ...base, brand_name: '' }).success).toBe(false);
     expect(brandProfileSchema.safeParse({ ...base, website: 'example.com' }).success).toBe(false);

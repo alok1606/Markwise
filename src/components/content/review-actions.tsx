@@ -52,7 +52,7 @@ export type RouteFacts = { version: number; status: string; ai_state: 'completed
 export function SendForApproval({ facts, reviewers, busy, onSend }: { facts: RouteFacts; reviewers: { id: string; name: string }[] | undefined; busy: boolean; onSend: (reviewerId: string | null) => void }) {
   const [reviewer, setReviewer] = useState('');
   const blocked = facts.check_outcome === 'failed' || facts.ai_state === 'pending' || facts.blocking > 0 || (facts.route === 'reviewer' && !reviewer);
-  return <section className="mt-6 rounded-lg border bg-card p-6" aria-labelledby="send-h">
+  return <section className="mt-6 rounded-xl border border-brand-teal/25 bg-brand-teal/[0.035] p-6" aria-labelledby="send-h">
     <h2 id="send-h" className="flex items-center gap-2 text-lg font-semibold"><RouteIcon className="size-4 text-primary" />Send for approval</h2>
     <p className="mt-1 text-sm text-muted-foreground">{facts.route === 'reviewer' ? 'A named reviewer must approve this version because:' : 'No claim or legal findings and all checks completed: this goes to a manager for approval.'}</p>
     {facts.route === 'reviewer' && !!facts.reasons?.length && <ul className="mt-1 list-disc pl-5 text-sm">{facts.reasons.map(r => <li key={r}>{r}</li>)}</ul>}
@@ -85,11 +85,17 @@ export function DecisionPanel({ approval, busy, onDecide }: { approval: Approval
 
 const strs = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 const decisionText: Record<string, string> = { open: 'Awaiting decision', approved: 'Approved', changes_requested: 'Changes requested', rejected: 'Rejected' };
+const decisionTone: Record<string, string> = {
+  open: 'border-sky-200 bg-sky-50 text-sky-800',
+  approved: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  changes_requested: 'border-amber-200 bg-amber-50 text-amber-800',
+  rejected: 'border-rose-200 bg-rose-50 text-rose-800',
+};
 export function ApprovalHistory({ approvals, names }: { approvals: ApprovalRow[]; names: Record<string, string> }) {
   if (!approvals.length) return null;
   return <section className="mt-6 rounded-lg border bg-card p-6"><h2 className="text-lg font-semibold">Approval history</h2><p className="text-sm text-muted-foreground">Every cycle and decision is kept and cannot be changed.</p>
     <ol className="mt-4 space-y-3">{approvals.map(a => <li key={a.id} className="rounded-md border p-3 text-sm">
-      <div className="flex flex-wrap items-center gap-2"><span className="font-medium">Version {a.version_number}</span><Badge variant={a.status === 'approved' ? 'default' : a.status === 'rejected' ? 'destructive' : 'secondary'}>{decisionText[a.status]}</Badge>
+      <div className="flex flex-wrap items-center gap-2"><span className="font-medium">Version {a.version_number}</span><Badge variant="outline" className={decisionTone[a.status] ?? 'border-slate-200 bg-slate-50 text-slate-700'}>{decisionText[a.status]}</Badge>
         <span className="text-muted-foreground">{a.route === 'reviewer' ? `Reviewer: ${names[a.reviewer_id ?? ''] ?? 'Reviewer'}` : 'Manager route'} · sent {new Date(a.created_at).toLocaleString()}</span>
         {a.ai_state_at_routing === 'failed' && <Badge variant="outline">AI review failed</Badge>}{a.check_outcome === 'completed_with_warnings' && <Badge variant="outline">Checks completed with warnings</Badge>}</div>
       {strs(a.route_reasons).length > 0 && <p className="mt-1 text-xs text-muted-foreground">Routing reason: {strs(a.route_reasons).join('; ')}</p>}

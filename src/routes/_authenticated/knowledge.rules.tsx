@@ -30,7 +30,7 @@ function Rules() {
     catch (err) { toast.error(err instanceof Error ? err.message : 'Unable to update rule'); }
   }
   return <EntityManager workspaceId={w.id} entity="rules" title="Rules" description="Brand rules and policies. Every change keeps the previous version." rows={data.rules} fields={fields} schema={ruleSchema} historyEnabled
-    columns={['Code', 'Rule', 'Severity', 'Type', 'Active']} emptyText="No rules yet. Add your first brand rule."
+    columns={['Code', 'Rule', 'Severity', 'Type', 'Active']} layout="cards" emptyText="No rules yet. Add your first brand rule."
     renderRow={r => [<span className="font-mono text-xs">{String(r.code)}</span>, <div><p className="font-medium">{String(r.title)}</p><p className="mt-1 text-xs capitalize text-muted-foreground">{String(r.category)} · v{String(r.version)}{r.is_demo ? ' · Fictional demo' : ''}</p></div>,
       <Badge variant={severityTone[String(r.severity)]} className="capitalize">{String(r.severity)}</Badge>, <span className="capitalize">{String(r.rule_type)}</span>,
       <Switch checked={Boolean(r.active)} aria-label={`${r.active ? 'Deactivate' : 'Activate'} ${String(r.code)}`} onCheckedChange={v => setActive(r.id, v)} />]} />;

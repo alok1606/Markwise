@@ -1,15 +1,16 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
+import { AksWordmark } from '@/components/aks-wordmark';
 import { Brand } from '@/components/brand';
 import { meta } from '@/lib/access';
 
 export const Route = createFileRoute('/demo')({
-  head: () => meta('Try the demo', 'Walk through the Nimbus Onboard demo: a fictional company, one risky sentence, cited findings and a human approval.'),
+  head: () => meta('Try the demo', 'Walk through the AKS Company demo: a fictional company, one risky sentence, cited findings and a human approval.'),
   component: DemoPage,
 });
 
 const steps = [
-  ['Admin', 'Open Knowledge Base and choose "Load demo data". This adds the fictional Nimbus Onboard rules, facts, glossary and colours, including FACT-014 and LEGAL-03.'],
+  ['Admin', 'Open Knowledge Base and choose "Load demo data". This adds fictional AKS Company rules, facts, glossary and colours, including FACT-014 and LEGAL-03.'],
   ['Creator', 'Choose New Content, paste the test sentence above, save it and submit it.'],
   ['Markwise', 'Automatic checks run first, then the AI review. Each finding cites the rule or fact it relies on, and anything that cannot be confirmed is marked "Needs checking".'],
   ['Creator', 'Accept, edit or dismiss each finding. Dismissing needs a reason. Every change saves a new version; earlier versions are kept.'],
@@ -21,7 +22,7 @@ function DemoPage() {
   return <div className="mx-auto max-w-3xl px-6 py-10">
     <Link to="/"><Brand /></Link>
     <h1 className="mt-16 text-3xl font-semibold">Try the demo</h1>
-    <p className="mt-4 leading-7 text-muted-foreground">The demo uses <strong className="text-foreground">Nimbus Onboard</strong>, a fictional company. All demo data is labelled "Demo data: fictional company".</p>
+    <p className="mt-4 leading-7 text-muted-foreground">The demo uses <strong className="font-semibold"><AksWordmark /></strong>, a fictional company. All demo data is labelled "Demo data: fictional company".</p>
     <figure className="mt-8 rounded-lg border bg-card p-6">
       <figcaption className="text-xs font-semibold uppercase text-muted-foreground">Test sentence</figcaption>
       <blockquote className="mt-2 text-xl font-medium">“We cut onboarding time by 60%, guaranteed!”</blockquote>
