@@ -127,6 +127,13 @@
       "when": 1793890759403,
       "tag": "0017_phase6_check_outcomes",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794078684140,
+      "tag": "0018_admin_review_read_only",
+      "breakpoints": true
     }
   ]
 }

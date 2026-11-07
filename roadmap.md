@@ -1,8 +1,8 @@
 ## Admin read-only Reviews (7 Nov 2026)
 - [x] Reuse review queue/detail, add Admin sidebar, workspace search/status filters and read-only evidence/history.
-- [x] Stage additive authorization migration; not applied or published.
-- [x] Run regressions (142 passed/151 skipped), 7 live isolation reads passed; positive Admin read failed before migration. Documented in docs/Admin_Reviews_Read_Only_Report.md.
-- [ ] Activate and verify populated Admin reviews, four-role write denial and file/history reads — blocked on owner migration approval and authorized populated workspace fixtures.
+- [x] Stage additive authorization migration; owner approved and applied it 7 Nov 2026 (not published).
+- [x] Verified: Judge Demo Admin sees all 9 reviewed items read-only; 20 live four-role/isolation/write-denial tests passed; full suite 146 passed/163 skipped. Documented in docs/Admin_Reviews_Read_Only_Report.md.
+- [ ] Publish Admin Reviews — waiting on owner instruction.
 
 # Phase 1
 - [x] Final acceptance recheck: 19 tests passed, eight skipped; reload/logout/invalid callback passed. Minted-fixture refresh rejected; exact real-account/session/mailbox steps documented in audit report.

@@ -1357,6 +1357,10 @@ export type Database = {
       }
       ai_state: { Args: { _version_id: string }; Returns: string }
       approval_route_facts: { Args: { _content_id: string }; Returns: Json }
+      can_inspect_content_review: {
+        Args: { _content_id: string }
+        Returns: boolean
+      }
       can_read_content: { Args: { _content_id: string }; Returns: boolean }
       can_read_content_file: { Args: { _name: string }; Returns: boolean }
       can_upload_content_file: { Args: { _name: string }; Returns: boolean }

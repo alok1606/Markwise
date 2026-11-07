@@ -1,6 +1,6 @@
-# Admin Reviews — staged, not activated
+# Admin Reviews — read-only, activated (not published)
 
-Date: 7 November 2026. No database changes applied; nothing published.
+Date: 7 November 2026. Database change applied on owner instruction; nothing published.
 
 ## Root cause
 - Admin navigation omitted Reviews.
@@ -9,40 +9,37 @@ Date: 7 November 2026. No database changes applied; nothing published.
 - Live `contents_read` excludes Admins. Reviews, findings, versions, approvals, actions and comments use `can_read_content`, which also excludes Admins.
 - Critically, `add_comment` uses `can_read_content` to authorize writes. Expanding that helper would accidentally let Admins comment.
 
-## Prepared change
-The existing `/review` route now includes an Admin-only read-only list, content/creator/reviewer search and status filters. It uses existing reviews, content and approvals, not another review system. Detail links reuse `/content/$id`: deterministic checks, AI findings and citations, approval history, versions and activity. Admin version accordions expose saved evidence for older versions too. Names use existing profile RLS; no profile policies were widened. Reviewed content only is included; drafts without reviews and deleted items remain inaccessible.
+## Change
+The existing `/review` route includes an Admin-only read-only list, content/creator/reviewer search and status filters. It uses existing reviews, content and approvals, not another review system. Detail links reuse `/content/$id`: deterministic checks, AI findings and citations, approval history, versions and activity. Names use existing profile RLS; no profile policies were widened. Only items with at least one review are included; never-checked drafts and deleted items remain inaccessible.
 
 Admin queries use the authenticated caller, never a service-role client. Review, content, approval and detail record queries explicitly scope the selected workspace. Reviewer queue semantics and Manager/Creator permissions are preserved. Admins receive no edit, submit, run-check, AI-run, finding-action, decision or comment controls.
 
-## Migration requiring review
-`docs/pending-migrations/0019_admin_review_read_only.sql` is a draft outside the active migration directory. It has NOT been applied.
+## Database change (applied)
+Reviewed source: `docs/pending-migrations/0019_admin_review_read_only.sql`. Applied as `drizzle/migrations/0018_admin_review_read_only.sql` with identical statements; only `BEGIN`/`COMMIT` were removed because the migration runner supplies the transaction.
 
-It adds `can_inspect_content_review`, requiring current membership, Admin role in the content workspace, a non-deleted content record and a matching workspace review. Seven additive SELECT-only policies cover content and its review/history records. File-download authorization additionally accepts this narrow predicate while retaining path/workspace validation. No tables, existing policies, table grants, upload rules, comment authorization or workflow functions are changed. `can_read_content` remains byte-for-byte unchanged, protecting existing comment restrictions.
+It adds `can_inspect_content_review`, requiring current membership, Admin role in the content workspace, a non-deleted content record and a matching workspace review. Seven additive SELECT-only policies cover content and its review/history records. File-download authorization additionally accepts this predicate while retaining path/workspace validation. No tables, existing policies, table grants, upload rules, comment authorization or workflow functions are changed. `can_read_content` is unchanged, protecting comment restrictions.
 
-Existing authenticated table grants include writes on approvals/comments/actions, but RLS has SELECT policies only; the draft adds no write policies. Content/version/review/finding write grants remain absent.
+Accepted as written by the owner: an Admin can read every version of a reviewed item, including a Creator's current unsubmitted edits after changes are requested.
 
-## Verification
-- Reproduced before edits: Admin `/review` denied and no Reviews link.
-- After edits: signed-in Admin sees Reviews navigation and screen; search and status controls work. Desktop 1280×1800 and mobile 450×558 screenshots inspected; no horizontal overflow, zero page exceptions.
-- Latest preview build: OK.
-- Full suite: **142 passed, 0 failed, 151 skipped**. Includes 8 new unit tests for role boundaries, preserved role permissions, search/status and workspace query scoping. Fixture-dependent live suites are skipped without private fixtures.
-- Separately ran the new live suite with the owner's authenticated Admin session: **7 passed, 1 failed, 0 skipped**. All seven cross-workspace reads returned no rows. The positive existing-review read failed (zero rows), as expected while the migration remains unapplied; the selected owner workspace also has no confirmed review fixture. This is NOT a passing end-to-end Admin-data test.
-- Confirmed the new database function is absent. No data writes, AI calls or permission changes were performed.
+Rollback: drop the seven `*_admin_review_read` policies, restore the previous `can_read_content_file` body (without the `OR can_inspect_content_review(...)` branch), then drop `can_inspect_content_review`.
+
+## Verification after applying
+- Seven new SELECT policies confirmed live.
+- Browser, signed in as the Judge Demo Admin: `/review` lists all **9** reviewed items in "Judge Demo — AKS Company" (the 10th item has never been checked and stays hidden). An item detail shows findings, citations, approval history, versions and comments with no edit, decision or comment controls; zero page errors.
+- Live four-role suite (`src/test/admin-reviews-roles-live.test.ts`, Judge Demo accounts): **12 passed**. Admin sees exactly the reviewed items; can read findings, versions, approvals and files; is refused for comments, approve/reject/request-changes, submit, create, direct inserts, updates and deletes. Creator still sees only own items; Manager only non-draft; Reviewer only assigned. All four roles read nothing from another workspace; signed-out visitors read nothing.
+- Live Admin suite (`src/test/admin-reviews-security-live.test.ts`): **8 passed**.
+- Post-test database check: no Admin comments, decisions, audit events or edited titles were created.
+- Full suite: **146 passed, 0 failed, 163 skipped** (skipped suites need the multi-workspace private fixture and service key). Two legacy live suites were updated so reviewed content is now expected to be Admin-readable; their write-denial checks are unchanged.
 
 ## Files changed for this request
-- `src/components/app-shell.tsx`
-- `src/lib/access.ts`
-- `src/lib/content.ts`
+- `src/components/app-shell.tsx`, `src/lib/access.ts`, `src/lib/content.ts`
 - `src/lib/admin-reviews.ts` (new)
-- `src/lib/approval.functions.ts`
-- `src/lib/content.functions.ts`
-- `src/lib/content-queries.ts`
-- `src/routes/_authenticated/review.tsx`
-- `src/routes/_authenticated/content.$id.tsx`
-- `src/test/admin-reviews.test.ts` (new)
-- `src/test/admin-reviews-security-live.test.ts` (new)
-- `docs/pending-migrations/0019_admin_review_read_only.sql` (new, unapplied)
+- `src/lib/approval.functions.ts`, `src/lib/content.functions.ts`, `src/lib/content-queries.ts`
+- `src/routes/_authenticated/review.tsx`, `src/routes/_authenticated/content.$id.tsx`
+- `src/test/admin-reviews.test.ts`, `src/test/admin-reviews-security-live.test.ts`, `src/test/admin-reviews-roles-live.test.ts` (new)
+- `src/test/approval-security-live.test.ts`, `src/test/review-security-live.test.ts` (expectations updated)
+- `drizzle/migrations/0018_admin_review_read_only.sql` (applied), `docs/pending-migrations/0019_admin_review_read_only.sql`
 - This report, `AGENTS.md`, and `roadmap.md`.
 
-## Awaiting owner approval
-Review and authorize the draft migration before activation. Then rerun against an Admin workspace with real reviews, verify populated detail/file/history end-to-end, and run four-role negative-write and cross-workspace acceptance with authorized fixtures. Legacy live suites that explicitly expect Admin denial must be revised for reviewed content at that stage. Do not claim Admin data access is complete until those checks pass. No Phase 7 work or publishing is authorized by this change.
+## Not done
+Not published. The legacy multi-workspace live suites remain skipped without their private fixture.

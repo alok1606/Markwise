@@ -85,7 +85,9 @@ describe.skipIf(!fixturePath || !url || !key || !service)('Live Phase 6 approval
     // Assigned reviewer can read content, findings and versions; the other reviewer cannot.
     expect(((await c['reviewer']!.from('contents').select('id').eq('id', id)).data ?? [])).toHaveLength(1);
     expect(((await c['reviewer']!.from('findings').select('id').eq('content_id', id)).data ?? []).length).toBeGreaterThan(0);
-    for (const who of ['reviewer2', 'reviewer_b', 'admin', 'creator2']) expect(((await c[who]!.from('contents').select('id').eq('id', id)).data ?? []), who).toHaveLength(0);
+    for (const who of ['reviewer2', 'reviewer_b', 'creator2']) expect(((await c[who]!.from('contents').select('id').eq('id', id)).data ?? []), who).toHaveLength(0);
+    // Migration 0019: a same-workspace Admin may read reviewed content (read-only) but still cannot decide it (checked below).
+    expect(((await c['admin']!.from('contents').select('id').eq('id', id)).data ?? [])).toHaveLength(1);
     for (const who of ['manager', 'reviewer2', 'creator']) expect((await decide(a.id, 1, 'approved', 'fine', who)).error, who).not.toBeNull();
     expect((await decide(a.id, 1, 'approved', '', 'reviewer')).error?.message).toMatch(/comment/i);
     expect((await decide(a.id, 1, 'changes_requested', 'Cite the source for 40%.', 'reviewer')).error).toBeNull();

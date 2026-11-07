@@ -1,4 +1,6 @@
--- DRAFT / NOT APPLIED. Owner review required before running through Lovable migrations.
+-- APPLIED 7 Nov 2026 on owner instruction as drizzle/migrations/0018_admin_review_read_only.sql
+-- (identical statements; BEGIN/COMMIT removed because the migration runner supplies the transaction).
+-- Kept here as the reviewed source text only; do not re-run.
 -- No tables, grants, write policies, workflow functions or existing read policies are changed.
 BEGIN;
 

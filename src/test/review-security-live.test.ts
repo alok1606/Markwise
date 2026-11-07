@@ -98,11 +98,11 @@ describe.skipIf(!fixturePath || !url || !key || !service)('Live Phase 4 review a
     expect((await admin.from('findings').update({ explanation: 'x' }).eq('id', f.id)).error?.message).toMatch(/immutable/);
     expect((await admin.from('findings').select('id').eq('content_id', contentId)).data).toHaveLength(4);
   });
-  it('only the owner and workspace Managers can read findings', async () => {
+  it('only the owner, workspace Managers and same-workspace Admins (read-only) can read findings', async () => {
     const n = async (r: string) => ((await c[r]!.from('findings').select('id').eq('content_id', contentId)).data ?? []).length;
     const rv = async (r: string) => ((await c[r]!.from('reviews').select('id').eq('content_id', contentId)).data ?? []).length;
-    expect(await n('creator')).toBe(4); expect(await n('manager')).toBe(4);
-    for (const r of ['creator2', 'reviewer', 'admin', 'admin_b', 'creator_b']) { expect(await n(r)).toBe(0); expect(await rv(r)).toBe(0); }
+    expect(await n('creator')).toBe(4); expect(await n('manager')).toBe(4); expect(await n('admin')).toBe(4);
+    for (const r of ['creator2', 'reviewer', 'admin_b', 'creator_b']) { expect(await n(r)).toBe(0); expect(await rv(r)).toBe(0); }
   });
   it('signed-out visitors have no access to reviews or findings', async () => {
     const anon = mk(key!);
