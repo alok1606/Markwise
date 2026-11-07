@@ -73,6 +73,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'forgot' | 'rese
       </div>
       <p role="note" className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950"><span className="font-semibold">Evaluation use only.</span> These demo credentials are shown here only for evaluation and access an isolated demo workspace. Do not use them for personal or production accounts.</p>
       <p className="mt-2 text-xs leading-5 text-muted-foreground">Each role provides a different view of Markwise&rsquo;s brand governance and approval workflow.</p>
+      <p className="mt-3 border-t border-border/60 pt-3 text-[11px] leading-5 text-muted-foreground"><span className="font-medium text-foreground">Temporary evaluation accounts.</span> These demo accounts are provided exclusively for CodeNexus India 2026 evaluation purposes and will be rotated or deactivated after the evaluation period ends.</p>
     </section>}
     {(mode === 'login' || mode === 'signup') && <><Button className="w-full" variant="outline" disabled={busy} onClick={signInWithGoogle}>Continue with Google</Button><div className="my-6 flex items-center gap-4 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />or continue with email<span className="h-px flex-1 bg-border" /></div></>}
     <form onSubmit={handleSubmit(submit)} className="space-y-5">
