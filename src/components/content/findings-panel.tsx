@@ -7,6 +7,12 @@ type Finding = { id: string; review_id: string; check_name: string; severity: st
 type Review = { id: string; version_number: number; run_at: string; status: string; dropped_findings_count: number; finding_count: number; limitations: unknown };
 
 const checkLabel: Record<string, string> = { banned_term: 'Banned terms', terminology: 'Terminology', numeric_claim: 'Numeric claims', alt_text: 'Image accessibility', contrast: 'Contrast', palette: 'Palette' };
+const severityTone: Record<string, string> = {
+  critical: 'border-rose-200 bg-rose-50 text-rose-800',
+  high: 'border-orange-200 bg-orange-50 text-orange-800',
+  medium: 'border-amber-200 bg-amber-50 text-amber-800',
+  low: 'border-sky-200 bg-sky-50 text-sky-800',
+};
 
 /** Highlights finding spans using UTF-16 offsets into the exact checked version text. */
 export function Highlighted({ text, findings }: { text: string; findings: Finding[] }) {
@@ -19,7 +25,7 @@ export function Highlighted({ text, findings }: { text: string; findings: Findin
     at = f.span_end!;
   }
   parts.push(text.slice(at));
-  return <p className="whitespace-pre-wrap text-sm leading-relaxed">{parts}</p>;
+  return <p className="whitespace-pre-wrap text-[15px] leading-8">{parts}</p>;
 }
 
 function Swatch({ hex }: { hex: string }) {
@@ -27,13 +33,13 @@ function Swatch({ hex }: { hex: string }) {
 }
 
 export function FindingsPanel({ review, findings, text, canRun, running, onRun, renderActions }: { review: Review | null; findings: Finding[]; text: string | null; canRun: boolean; running: boolean; onRun: () => void; renderActions?: (f: Finding) => React.ReactNode }) {
-  if (!review) return <section className="mt-8 rounded-lg border bg-card p-6"><h2 className="text-lg font-semibold">Automatic checks</h2>
+  if (!review) return <section className="mt-4 rounded-xl border border-dashed bg-muted/20 p-4 sm:p-5"><h3 className="text-base font-semibold text-brand-ink">Automatic checks</h3>
     <p className="mt-1 text-sm text-muted-foreground">No automatic checks have been saved for the submitted version. If checking failed, nothing was saved and this version cannot go for approval until the checks run successfully.</p>
     {canRun && <Button className="mt-4" onClick={onRun} disabled={running}>{running ? 'Checking…' : 'Run automatic checks'}</Button>}</section>;
   const mine = findings.filter(f => f.review_id === review.id);
   const limitations = Array.isArray(review.limitations) ? review.limitations.filter((x): x is string => typeof x === 'string') : [];
-  return <section className="mt-8 rounded-lg border bg-card p-6">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-semibold">Automatic checks</h2><span className="text-xs text-muted-foreground">Version {review.version_number} · {new Date(review.run_at).toLocaleString()} · no AI used</span></div>
+  return <section className="mt-4 rounded-xl border bg-background p-4 sm:p-5">
+    <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-base font-semibold text-brand-ink">Automatic checks</h3><span className="text-xs text-muted-foreground">Version {review.version_number} · {new Date(review.run_at).toLocaleString()} · no AI used</span></div>
     <p className="mt-1 text-sm text-muted-foreground">Rule-based results for the exact submitted version. They cannot be changed. Figures are marked “needs checking”, not as errors.</p>
     {limitations.length > 0 && <div role="status" className="mt-3 rounded-md border border-dashed p-3 text-sm"><p className="flex items-center gap-2 font-medium"><Info className="size-4 shrink-0 text-primary" />Completed with warnings — {limitations.length} check{limitations.length === 1 ? '' : 's'} could not produce a result</p>
       <p className="mt-1 text-xs text-muted-foreground">An incomplete check is not a pass. This version can still go for approval, but a named reviewer must decide it.</p>
@@ -42,13 +48,13 @@ export function FindingsPanel({ review, findings, text, canRun, running, onRun, 
     {!mine.length && <p className="mt-4 flex items-center gap-2 text-sm"><CheckCircle2 className="size-4 text-primary" />No issues found by the automatic checks.</p>}
     {text && mine.some(f => f.span_start !== null) && <div className="mt-4 rounded-md border bg-background p-4"><Highlighted text={text} findings={mine} /></div>}
     {mine.length > 0 && <p className="mt-5 text-xs text-muted-foreground">Sorted by severity: critical, high, medium, low.</p>}
-    <ul className="mt-2 space-y-2">{sortBySeverity(mine).map(f => <li key={f.id} className="rounded-md border p-3 text-sm">
+    <ul className="mt-2 space-y-2">{sortBySeverity(mine).map(f => <li key={f.id} className={`rounded-r-lg border border-l-[3px] bg-card p-3 text-sm shadow-[0_5px_16px_-16px_rgba(15,23,42,0.45)] ${f.outcome === 'cannot_verify' ? 'border-l-amber-500' : f.severity === 'critical' || f.severity === 'high' ? 'border-l-rose-500' : 'border-l-brand-blue/60'}`}>
         <div className="flex flex-wrap items-center gap-2">{f.outcome === 'cannot_verify' ? <HelpCircle className="size-4 text-muted-foreground" /> : <AlertTriangle className="size-4 text-destructive" />}
           {f.quoted_text && <q className="font-medium">{f.quoted_text}</q>}{f.check_name === 'palette' && <Swatch hex={f.quoted_text} />}
-          <Badge variant="outline" className="capitalize">{f.severity}</Badge><Badge variant="outline">{checkLabel[f.check_name] ?? f.check_name}</Badge>{f.outcome === 'cannot_verify' && <Badge variant="secondary">Needs checking</Badge>}
+          <Badge variant="outline" className={`capitalize ${severityTone[f.severity] ?? 'border-slate-200 bg-slate-50 text-slate-700'}`}>{f.severity}</Badge><Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">{checkLabel[f.check_name] ?? f.check_name}</Badge>{f.outcome === 'cannot_verify' && <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800">Needs checking</Badge>}
           {f.span_start !== null && <span className="text-xs text-muted-foreground">characters {f.span_start}–{f.span_end}</span>}</div>
         <p className="mt-1">{f.explanation}</p>
-        {(f.cited_code || f.cited_passage) && <p className="mt-1 text-xs text-muted-foreground">Based on {f.cited_kind === 'rule' ? 'rule' : f.cited_kind === 'glossary' ? 'glossary term' : f.cited_kind === 'palette' ? 'palette colour' : ''} <span className="font-medium">{f.cited_code}</span>{f.cited_kind === 'palette' && <> <Swatch hex={f.cited_passage} /></>}{f.cited_passage ? ` — ${f.cited_passage}` : ''}</p>}
+        {(f.cited_code || f.cited_passage) && <p className="mt-2 rounded-md border border-brand-blue/10 bg-brand-blue/[0.035] px-2.5 py-2 text-xs text-slate-600">Based on {f.cited_kind === 'rule' ? 'rule' : f.cited_kind === 'glossary' ? 'glossary term' : f.cited_kind === 'palette' ? 'palette colour' : ''} <span className="font-semibold text-brand-navy">{f.cited_code}</span>{f.cited_kind === 'palette' && <> <Swatch hex={f.cited_passage} /></>}{f.cited_passage ? ` — ${f.cited_passage}` : ''}</p>}
         {renderActions?.(f)}
       </li>)}</ul>
   </section>;

@@ -49,8 +49,8 @@ describe('terminology', () => {
     expect(f[0]).toMatchObject({ cited_kind: 'glossary', cited_id: 'g1', cited_code: 'customers', explanation: 'Use "customers" instead of "Clients".' });
   });
   it('respects case-sensitive entries', () => {
-    const cs = [{ id: 'g2', preferred_term: 'Nimbus Onboard', avoided_terms: ['Nimbus'], case_sensitive: true }];
-    expect(checkTerminology('nimbus Nimbus', cs).map(x => x.span_start)).toEqual([7]);
+    const cs = [{ id: 'g2', preferred_term: 'AKS Company', avoided_terms: ['AKS'], case_sensitive: true }];
+    expect(checkTerminology('aks AKS', cs).map(x => x.span_start)).toEqual([4]);
   });
   it('handles empty glossary and text', () => { expect(checkTerminology('', g)).toEqual([]); expect(checkTerminology('clients', [])).toEqual([]); });
 });

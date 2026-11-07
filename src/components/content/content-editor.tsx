@@ -16,7 +16,11 @@ import { extractPdfText } from '@/lib/pdf-text';
 
 type Existing = { id: string; version: number; type: ContentType; fields: ContentFields; file_name: string | null };
 const empty: ContentFields = { title: '', channel: 'Web', audience: '', goal: '', body_text: '', alt_text: '', text_color: null, background_color: null };
-const typeOptions = [{ v: 'text', label: 'Text', icon: Type }, { v: 'image', label: 'Image', icon: ImageIcon }, { v: 'pdf', label: 'PDF', icon: FileText }] as const;
+const typeOptions = [
+  { v: 'text', label: 'Text', description: 'Write and check copy directly.', icon: Type },
+  { v: 'image', label: 'Image', description: 'Add alt text and optional brand colours.', icon: ImageIcon },
+  { v: 'pdf', label: 'PDF', description: 'Extract text, review it, then confirm.', icon: FileText },
+] as const;
 const extOf: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'application/pdf': 'pdf' };
 
 export function ContentEditor({ workspaceId, existing, onSaved }: { workspaceId: string; existing?: Existing; onSaved?: () => void }) {
@@ -68,28 +72,89 @@ export function ContentEditor({ workspaceId, existing, onSaved }: { workspaceId:
     } finally { setBusy(false); }
   }
 
-  return <form onSubmit={submit} className="space-y-6 rounded-lg border bg-card p-6">
-    {!existing && <fieldset><legend className="text-sm font-medium">Content type</legend><div className="mt-2 grid gap-3 sm:grid-cols-3">{typeOptions.map(o => <button type="button" key={o.v} aria-pressed={type === o.v} onClick={() => { setType(o.v); setFile(null); setPdfText(null); setError(''); }} className={`flex items-center gap-3 rounded-md border p-4 text-left text-sm ${type === o.v ? 'border-primary bg-accent font-medium' : 'hover:bg-muted'}`}><o.icon className="size-4 text-primary" />{o.label}</button>)}</div></fieldset>}
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="title">Title</Label><Input id="title" value={f.title} maxLength={160} onChange={e => set('title', e.target.value)} /></div>
-      <div className="space-y-1.5"><Label htmlFor="channel">Channel</Label><select id="channel" className="h-9 w-full rounded-md border bg-card px-3 text-sm" value={f.channel} onChange={e => set('channel', e.target.value)}>{channels.map(c => <option key={c}>{c}</option>)}</select></div>
-      <div className="space-y-1.5"><Label htmlFor="audience">Audience</Label><Input id="audience" value={f.audience} maxLength={300} onChange={e => set('audience', e.target.value)} /></div>
-      <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="goal">Goal</Label><Input id="goal" value={f.goal} maxLength={500} onChange={e => set('goal', e.target.value)} /></div>
+  const selectedType = typeOptions.find(o => o.v === type)!;
+  const previewTitle = f.title.trim() || 'Untitled draft';
+  const previewBody = type === 'text' ? f.body_text : type === 'pdf' ? (pdfText ?? f.body_text) : f.alt_text;
+
+  return <form onSubmit={submit} className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_290px]">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-t-4 border-t-brand-blue bg-card shadow-sm">
+      <header className="border-b bg-blue-50/65 px-5 py-5 sm:px-7">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-blue">Draft editor</p>
+        <h2 className="mt-1 text-xl font-semibold tracking-tight text-brand-ink">Build your content</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Add the context and source material your team will need when reviewing it.</p>
+      </header>
+      <div className="space-y-7 p-5 sm:p-7">
+        {!existing && <fieldset>
+          <legend className="text-sm font-semibold text-brand-ink">Choose a format</legend>
+          <p className="mt-1 text-xs text-muted-foreground">Select the type of content you want to prepare.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">{typeOptions.map(o => <button type="button" key={o.v} aria-pressed={type === o.v} onClick={() => { setType(o.v); setFile(null); setPdfText(null); setError(''); }} className={`group min-w-0 rounded-xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue ${type === o.v ? 'border-brand-blue bg-blue-50 shadow-sm ring-1 ring-brand-blue/20' : 'border-border bg-background hover:border-brand-blue/30 hover:bg-slate-50'}`}>
+            <span className={`flex size-10 items-center justify-center rounded-xl ${type === o.v ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-brand-blue'}`}><o.icon className="size-5" /></span>
+            <span className="mt-3 block text-sm font-semibold text-brand-ink">{o.label}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{o.description}</span>
+          </button>)}</div>
+        </fieldset>}
+
+        <section aria-labelledby="content-details-title">
+          <div className="mb-4 flex items-center gap-3"><span className="flex size-8 items-center justify-center rounded-lg bg-teal-50 text-teal-800">1</span><div><h3 id="content-details-title" className="text-sm font-semibold text-brand-ink">Content details</h3><p className="text-xs text-muted-foreground">Give reviewers the context behind this piece.</p></div></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="title">Title</Label><Input id="title" value={f.title} maxLength={160} onChange={e => set('title', e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="channel">Channel</Label><select id="channel" className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-blue" value={f.channel} onChange={e => set('channel', e.target.value)}>{channels.map(c => <option key={c}>{c}</option>)}</select></div>
+            <div className="space-y-1.5"><Label htmlFor="audience">Audience</Label><Input id="audience" value={f.audience} maxLength={300} onChange={e => set('audience', e.target.value)} /></div>
+            <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="goal">Goal</Label><Input id="goal" value={f.goal} maxLength={500} onChange={e => set('goal', e.target.value)} /></div>
+          </div>
+        </section>
+
+        {type === 'text' && <section className="border-t pt-6" aria-labelledby="content-body-title">
+          <div className="mb-3 flex items-start justify-between gap-3"><div><h3 id="content-body-title" className="text-sm font-semibold text-brand-ink">Content</h3><p className="mt-1 text-xs text-muted-foreground">Paste or write the copy you want reviewed.</p></div><span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-800">Text</span></div>
+          <div className="space-y-1.5"><Label htmlFor="body">Draft text</Label><Textarea id="body" rows={14} value={f.body_text} onChange={e => set('body_text', e.target.value)} className="min-h-72 resize-y rounded-xl border-slate-200 bg-[#fbfaf6] leading-7 shadow-inner" /><p className={`text-right text-xs ${f.body_text.length > TEXT_LIMIT ? 'text-destructive' : 'text-muted-foreground'}`} aria-live="polite">{f.body_text.length.toLocaleString()} / {TEXT_LIMIT.toLocaleString()} characters</p></div>
+        </section>}
+
+        {type !== 'text' && <section className="border-t pt-6" aria-labelledby="file-source-title">
+          <div className="mb-3"><h3 id="file-source-title" className="text-sm font-semibold text-brand-ink">Source file</h3><p className="mt-1 text-xs text-muted-foreground">Upload the original {type === 'image' ? 'image' : 'PDF'} for this review.</p></div>
+          <div className="space-y-2"><Label htmlFor="file">{existing?.file_name ? 'Replace file' : type === 'image' ? 'Image' : 'PDF'}</Label>
+            <label htmlFor="file" className="flex cursor-pointer items-center gap-4 rounded-xl border border-dashed border-brand-blue/35 bg-blue-50/45 p-5 text-sm transition-colors hover:border-brand-blue/60 hover:bg-blue-50/75"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-brand-blue"><Upload className="size-5" /></span><span className="min-w-0"><span className="block truncate font-medium text-brand-ink">{file ? file.name : existing?.file_name ? `Current: ${existing.file_name}` : `Choose a file (${contentFileRules[type].label})`}</span><span className="mt-1 block text-xs text-muted-foreground">{file ? 'Selected for this draft' : `Supported: ${contentFileRules[type].label}`}</span></span></label>
+            <input id="file" type="file" className="sr-only" accept={Object.keys(contentFileRules[type].types).join(',')} onChange={e => void pickFile(e.target.files?.[0] ?? null)} />
+            {existing?.file_name && <p className="text-xs text-muted-foreground">Earlier files stay in the version history.</p>}
+          </div>
+        </section>}
+
+        {type === 'image' && <section className="border-t pt-6" aria-labelledby="image-accessibility-title">
+          <div className="mb-4"><h3 id="image-accessibility-title" className="text-sm font-semibold text-brand-ink">Image accessibility & colour</h3><p className="mt-1 text-xs text-muted-foreground">Optional brand context helps reviewers assess the visual.</p></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="alt">Alt text</Label><Input id="alt" value={f.alt_text ?? ''} maxLength={500} onChange={e => set('alt_text', e.target.value)} /><p className="text-xs text-muted-foreground">Describe the image for screen readers. You can leave it empty; a later check will flag it.</p></div>
+            <div className="space-y-1.5"><Label htmlFor="tc">Text colour (optional)</Label><Input id="tc" placeholder="#1F2A44" value={f.text_color ?? ''} onChange={e => set('text_color', e.target.value || null)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="bg">Background colour (optional)</Label><Input id="bg" placeholder="#FFFFFF" value={f.background_color ?? ''} onChange={e => set('background_color', e.target.value || null)} /></div>
+          </div>
+        </section>}
+
+        {type === 'pdf' && existing && !file && <section className="border-t pt-6"><h3 className="mb-2 text-sm font-semibold text-brand-ink">Saved text</h3><p className="max-h-48 overflow-auto whitespace-pre-wrap rounded-xl border bg-slate-50 p-4 text-sm leading-6">{f.body_text || 'No text saved.'}</p></section>}
+        {type === 'pdf' && pdfText !== null && <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4" aria-labelledby="pdf-confirm-title"><div className="mb-2"><h3 id="pdf-confirm-title" className="text-sm font-semibold text-amber-950">Review extracted text</h3><p className="mt-1 text-xs text-amber-900/80">Confirm the text is correct before saving the PDF draft.</p></div><p className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-amber-200/70 bg-white p-4 text-sm leading-6">{pdfText || 'No text found in this PDF.'}</p>
+          <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm font-medium text-amber-950"><Checkbox checked={confirmed} onCheckedChange={v => setConfirmed(v === true)} aria-label="I confirm the extracted text is correct" />I confirm the extracted text is correct</label></section>}
+      </div>
     </div>
-    {type === 'text' && <div className="space-y-1.5"><Label htmlFor="body">Text</Label><Textarea id="body" rows={12} value={f.body_text} onChange={e => set('body_text', e.target.value)} /><p className={`text-xs ${f.body_text.length > TEXT_LIMIT ? 'text-destructive' : 'text-muted-foreground'}`} aria-live="polite">{f.body_text.length.toLocaleString()} / {TEXT_LIMIT.toLocaleString()} characters</p></div>}
-    {type !== 'text' && <div className="space-y-1.5"><Label htmlFor="file">{existing?.file_name ? 'Replace file' : type === 'image' ? 'Image' : 'PDF'}</Label>
-      <label htmlFor="file" className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-4 text-sm text-muted-foreground"><Upload className="size-4" />{file ? file.name : existing?.file_name ? `Current: ${existing.file_name}` : `Choose a file (${contentFileRules[type].label})`}</label>
-      <input id="file" type="file" className="sr-only" accept={Object.keys(contentFileRules[type].types).join(',')} onChange={e => void pickFile(e.target.files?.[0] ?? null)} />
-      {existing?.file_name && <p className="text-xs text-muted-foreground">Earlier files stay in the version history.</p>}</div>}
-    {type === 'image' && <div className="grid gap-4 sm:grid-cols-3">
-      <div className="space-y-1.5 sm:col-span-3"><Label htmlFor="alt">Alt text</Label><Input id="alt" value={f.alt_text ?? ''} maxLength={500} onChange={e => set('alt_text', e.target.value)} /><p className="text-xs text-muted-foreground">Describe the image for screen readers. You can leave it empty; a later check will flag it.</p></div>
-      <div className="space-y-1.5"><Label htmlFor="tc">Text colour (optional)</Label><Input id="tc" placeholder="#1F2A44" value={f.text_color ?? ''} onChange={e => set('text_color', e.target.value || null)} /></div>
-      <div className="space-y-1.5"><Label htmlFor="bg">Background colour (optional)</Label><Input id="bg" placeholder="#FFFFFF" value={f.background_color ?? ''} onChange={e => set('background_color', e.target.value || null)} /></div>
-    </div>}
-    {type === 'pdf' && existing && !file && <div className="space-y-1.5"><Label>Saved text</Label><p className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border bg-muted p-3 text-sm">{f.body_text || 'No text saved.'}</p></div>}
-    {type === 'pdf' && pdfText !== null && <div className="space-y-2"><Label>Extracted text</Label><p className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md border bg-muted p-3 text-sm">{pdfText || 'No text found in this PDF.'}</p>
-      <label className="flex items-center gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={v => setConfirmed(v === true)} aria-label="I confirm the extracted text is correct" />I confirm the extracted text is correct</label></div>}
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    <div className="flex justify-end"><Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save draft'}</Button></div>
+
+    <aside className="min-w-0 space-y-4 xl:sticky xl:top-24">
+      <section className="overflow-hidden rounded-2xl bg-brand-ink text-white shadow-[0_16px_38px_-28px_rgba(15,23,42,0.8)]" aria-label="Live draft preview">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3"><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">Live draft preview</span><span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium text-white">{selectedType.label}</span></div>
+        <div className="p-5"><h3 className="break-words text-lg font-semibold leading-snug">{previewTitle}</h3>
+          <div className="mt-4 flex flex-wrap gap-2"><span className="rounded-full bg-blue-400/15 px-2.5 py-1 text-[11px] font-medium text-blue-100">{f.channel || 'No channel'}</span>{f.audience && <span className="rounded-full bg-teal-400/15 px-2.5 py-1 text-[11px] font-medium text-teal-100">{f.audience}</span>}</div>
+          {f.goal && <p className="mt-4 border-l-2 border-teal-300/70 pl-3 text-xs leading-5 text-slate-200">{f.goal}</p>}
+          {type === 'text' && <p className="mt-4 whitespace-pre-wrap border-t border-white/10 pt-4 text-xs leading-6 text-slate-300">{previewBody?.trim() ? `${previewBody.trim().slice(0, 260)}${previewBody.trim().length > 260 ? '…' : ''}` : 'Your text preview will appear here as you write.'}</p>}
+          {type !== 'text' && <p className="mt-4 border-t border-white/10 pt-4 text-xs leading-5 text-slate-300">{file?.name ?? existing?.file_name ?? (type === 'image' ? 'No image selected yet.' : 'No PDF selected yet.')}</p>}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-teal-200 bg-teal-50/70 p-5" aria-label="What happens next">
+        <div className="flex items-center gap-2 text-teal-900"><span className="flex size-8 items-center justify-center rounded-lg bg-teal-100"><FileText className="size-4" /></span><h3 className="text-sm font-semibold">What happens next</h3></div>
+        <ol className="mt-4 space-y-4 text-xs leading-5 text-teal-950">
+          <li className="flex gap-3"><span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-teal-800 ring-1 ring-teal-200">1</span><span><strong>Save a draft.</strong> Keep editing until it is ready to submit.</span></li>
+          <li className="flex gap-3"><span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-teal-800 ring-1 ring-teal-200">2</span><span><strong>Submit for review.</strong> The submitted version receives automatic and AI review.</span></li>
+          <li className="flex gap-3"><span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-teal-800 ring-1 ring-teal-200">3</span><span><strong>People decide.</strong> AI suggestions support the human approval process.</span></li>
+        </ol>
+      </section>
+
+      {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
+      <Button type="submit" className="w-full shadow-sm" size="lg" disabled={busy}>{busy ? <LoaderCircle className="animate-spin" /> : <Upload />}{busy ? 'Saving…' : existing ? 'Save draft changes' : 'Save draft'}</Button>
+      <p className="text-center text-[11px] leading-5 text-muted-foreground">{existing ? 'Saving creates a new version. Earlier versions remain in history.' : 'Your content is saved as a draft in this workspace.'}</p>
+    </aside>
   </form>;
 }
