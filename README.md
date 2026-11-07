@@ -8,6 +8,10 @@ Markwise is a **team-designed and team-directed software engineering project** â
 
 **Production:** The approved Markwise redesign is live on [Lovable Cloud](https://markwise-product-studio.lovable.app).
 
+## License
+
+Original Markwise source code and Markwise-created website assets are licensed under the [MIT License](LICENSE). This does not cover the supplied reference materials in `docs/sources/`, evidence screenshots in `docs/evidence/`, third-party dependencies, or other separately credited materials, which remain under their respective rights. The license does not grant rights to the Markwise name or trademarks.
+
 ---
 
 ## 1. Main features (implemented, Phases 1â€“6)
