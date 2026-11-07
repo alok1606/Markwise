@@ -15,7 +15,8 @@ async function requireRole(ctx: Ctx, workspaceId: string, role: 'creator' | 'man
   if (error || !data) throw new Error(message);
 }
 async function contentRole(ctx: Ctx, workspaceId: string) {
-  const [c, m, rv] = await Promise.all(['creator', 'manager', 'reviewer'].map(r => ctx.supabase.rpc('has_role', { _user_id: ctx.userId, _role: r, _workspace_id: workspaceId })));
+  const [c, m, rv, a] = await Promise.all(['creator', 'manager', 'reviewer', 'admin'].map(r => ctx.supabase.rpc('has_role', { _user_id: ctx.userId, _role: r, _workspace_id: workspaceId })));
+  if (a?.data && !a.error) return 'admin';
   if (c?.data) return 'creator'; if (m?.data) return 'manager'; if (rv?.data) return 'reviewer';
   throw new Error('You do not have access to content in this workspace');
 }
@@ -49,21 +50,21 @@ export const getContent = createServerFn({ method: 'GET' }).middleware([requireS
   const row = await context.supabase.from('contents').select('*').eq('id', data.id).eq('workspace_id', data.workspace_id).maybeSingle();
   if (row.error || !row.data) throw new Error('Content not found in this workspace');
   const c = row.data;
-  const versions = await context.supabase.from('content_versions').select('id,version_number,title,body_text,file_name,file_path,alt_text,text_color,background_color,change_summary,changed_by,created_at').eq('content_id', c.id).order('version_number', { ascending: false });
+  const versions = await context.supabase.from('content_versions').select('id,version_number,title,body_text,file_name,file_path,alt_text,text_color,background_color,change_summary,changed_by,created_at').eq('workspace_id', data.workspace_id).eq('content_id', c.id).order('version_number', { ascending: false });
   fail(versions.error);
   let file_url: string | null = null;
   if (c.file_path) { const s = await context.supabase.storage.from('content-files').createSignedUrl(c.file_path, 600); file_url = s.data?.signedUrl ?? null; }
   const owner = await context.supabase.from('profiles').select('full_name,email').eq('id', c.owner_id).maybeSingle();
-  const reviews = await context.supabase.from('reviews').select('id,content_version_id,version_number,run_at,status,dropped_findings_count,downgraded_findings_count,finding_count,limitations,source,model,prompt_version,evidence_text,file_sha256').eq('content_id', c.id).order('version_number', { ascending: false });
+  const reviews = await context.supabase.from('reviews').select('id,content_version_id,version_number,run_at,status,dropped_findings_count,downgraded_findings_count,finding_count,limitations,source,model,prompt_version,evidence_text,file_sha256').eq('workspace_id', data.workspace_id).eq('content_id', c.id).order('version_number', { ascending: false });
   fail(reviews.error);
-  const findings = reviews.data?.length ? await context.supabase.from('findings').select('id,review_id,source,check_name,category,severity,confidence,span_start,span_end,quoted_text,explanation,cited_kind,cited_code,cited_passage,outcome,suggested_text,evidence_kind,bbox').eq('content_id', c.id).order('span_start', { ascending: true, nullsFirst: true }) : { data: [], error: null };
+  const findings = reviews.data?.length ? await context.supabase.from('findings').select('id,review_id,source,check_name,category,severity,confidence,span_start,span_end,quoted_text,explanation,cited_kind,cited_code,cited_passage,outcome,suggested_text,evidence_kind,bbox').eq('workspace_id', data.workspace_id).eq('content_id', c.id).order('span_start', { ascending: true, nullsFirst: true }) : { data: [], error: null };
   fail(findings.error);
   // Phase 6 records, read as the caller under RLS.
   const [actions, approvals, comments, facts] = await Promise.all([
-    context.supabase.from('finding_actions').select('id,finding_id,version_id,action,reason,final_text,result_version_id,actor_id,created_at').eq('content_id', c.id).order('created_at'),
-    context.supabase.from('approvals').select('id,version_id,version_number,route,reviewer_id,assigned_by,ai_state_at_routing,check_outcome,check_limitations,route_reasons,status,decision_comment,decided_by,decided_at,created_at').eq('content_id', c.id).order('created_at'),
-    context.supabase.from('comments').select('id,parent_id,author_id,message,created_at').eq('content_id', c.id).order('created_at'),
-    c.status === 'draft' ? Promise.resolve({ data: null, error: null }) : context.supabase.rpc('approval_route_facts', { _content_id: c.id }),
+    context.supabase.from('finding_actions').select('id,finding_id,version_id,action,reason,final_text,result_version_id,actor_id,created_at').eq('workspace_id', data.workspace_id).eq('content_id', c.id).order('created_at'),
+    context.supabase.from('approvals').select('id,version_id,version_number,route,reviewer_id,assigned_by,ai_state_at_routing,check_outcome,check_limitations,route_reasons,status,decision_comment,decided_by,decided_at,created_at').eq('workspace_id', data.workspace_id).eq('content_id', c.id).order('created_at'),
+    context.supabase.from('comments').select('id,parent_id,author_id,message,created_at').eq('workspace_id', data.workspace_id).eq('content_id', c.id).order('created_at'),
+    c.status === 'draft' || role === 'admin' ? Promise.resolve({ data: null, error: null }) : context.supabase.rpc('approval_route_facts', { _content_id: c.id }),
   ]);
   fail(actions.error); fail(approvals.error); fail(comments.error);
   const people = new Set<string>([...(actions.data ?? []).map((a: { actor_id: string }) => a.actor_id), ...(approvals.data ?? []).flatMap((a: { reviewer_id: string | null; decided_by: string | null; assigned_by: string }) => [a.reviewer_id, a.decided_by, a.assigned_by]), ...(comments.data ?? []).map((x: { author_id: string }) => x.author_id)].filter(Boolean) as string[]);

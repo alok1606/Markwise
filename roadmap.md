@@ -1,4 +1,10 @@
 # Phase 1
+## Admin read-only Reviews (7 Nov 2026)
+- [ ] Reuse review queue/detail, add Admin sidebar, workspace search/status filters and read-only evidence/history.
+- [ ] Stage additive authorization migration; do not apply or publish.
+- [ ] Run role/isolation regressions and document verification blocked by unapplied migration.
+
+# Phase 1
 - [x] Final acceptance recheck: 19 tests passed, eight skipped; reload/logout/invalid callback passed. Minted-fixture refresh rejected; exact real-account/session/mailbox steps documented in audit report.
 - [x] Complete comprehensive Phase 1 audit, fix confirmed bugs, and produce A–L results with external blockers; do not start Phase 2.
 - [ ] Finish full four-role/two-workspace and expiry/refresh live verification; blocked on authorized role-account fixtures and time-bound session testing.

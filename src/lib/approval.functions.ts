@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { applyRewrite } from './approval';
 import { aiReview, executeChecks } from './content.functions';
+import { readAdminReviews } from './admin-reviews';
 
 type Ctx = { supabase: any; userId: string }; // eslint-disable-line @typescript-eslint/no-explicit-any
 const idInput = z.object({ workspace_id: z.string().uuid(), id: z.string().uuid() });
@@ -81,12 +82,13 @@ export const listWorkspaceReviewers = createServerFn({ method: 'GET' }).middlewa
 export const listReviewQueue = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth])
   .inputValidator(z.object({ workspace_id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
+    if (await hasRole(context, data.workspace_id, 'admin')) return readAdminReviews(context.supabase, data.workspace_id);
     if (!(await hasRole(context, data.workspace_id, 'reviewer'))) throw new Error('Only reviewers have a review queue');
     const a = await context.supabase.from('approvals').select('id,content_id,version_number,status,created_at,decided_at').eq('workspace_id', data.workspace_id).eq('reviewer_id', context.userId).order('created_at', { ascending: false });
     fail(a.error);
     const ids = [...new Set((a.data ?? []).map((x: { content_id: string }) => x.content_id))];
     if (!ids.length) return [];
-    const c = await context.supabase.from('contents').select('id,title,type,channel,status,version,owner_id,updated_at').in('id', ids);
+    const c = await context.supabase.from('contents').select('id,title,type,channel,status,version,owner_id,updated_at').eq('workspace_id', data.workspace_id).in('id', ids);
     fail(c.error);
     const byId = new Map((c.data ?? []).map((x: { id: string }) => [x.id, x]));
     const seen = new Set<string>(); const out = [];

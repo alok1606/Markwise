@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useWorkspace } from '@/components/app-shell';
 import { AccessRequired, StatusBadge, TypeIcon } from '@/components/content/content-ui';
 import { ContentEditor } from '@/components/content/content-editor';
-import { canCreateContent, canReviewAssigned, canViewWorkspaceContent, isEditable, type ContentStatus, type ContentType } from '@/lib/content';
+import { canCreateContent, canInspectReviews, canReviewAssigned, canViewWorkspaceContent, isEditable, type ContentStatus, type ContentType } from '@/lib/content';
 import { contentOptions, reviewersOptions } from '@/lib/content-queries';
 import { deleteContentDraft, getVersionFileUrl, runAiReview, runContentChecks, submitContent } from '@/lib/content.functions';
 import { actOnFinding, addComment, decideApproval, submitForApproval } from '@/lib/approval.functions';
@@ -27,7 +27,8 @@ export const Route = createFileRoute('/_authenticated/content/$id')({ head: () =
 
 function ContentDetail() {
   const { id } = Route.useParams(); const ws = useWorkspace(); const qc = useQueryClient(); const navigate = useNavigate();
-  const allowed = canCreateContent(ws.role) || canViewWorkspaceContent(ws.role) || canReviewAssigned(ws.role);
+  const admin = canInspectReviews(ws.role);
+  const allowed = canCreateContent(ws.role) || canViewWorkspaceContent(ws.role) || canReviewAssigned(ws.role) || admin;
   const q = useQuery({ ...contentOptions(ws.id, id), enabled: !!ws.id && allowed, retry: false });
   const submit = useServerFn(submitContent); const remove = useServerFn(deleteContentDraft); const versionUrl = useServerFn(getVersionFileUrl); const runChecksFn = useServerFn(runContentChecks); const runAiFn = useServerFn(runAiReview);
   const actFn = useServerFn(actOnFinding); const sendFn = useServerFn(submitForApproval); const decideFn = useServerFn(decideApproval); const commentFn = useServerFn(addComment);
@@ -102,8 +103,8 @@ function ContentDetail() {
   const ai = reviews.find(r => r.version_number === c.version && r.source === 'ai') ?? null;
   const latestFindings = findings.filter(f => f.review_id === rv?.id || f.review_id === ai?.id);
   const canActOnFindings = is_owner && status === 'checked';
-  const renderActions = (f: { id: string }) => { const full = findings.find(x => x.id === f.id)!; return <FindingResolution f={full} action={actionsByFinding.get(f.id)} names={names} canAct={canActOnFindings} canRewrite={type !== 'image'} busy={busy} onAct={(a, o) => onFindingAction(f.id, a, o)} />; };
-  const backTo = is_owner ? '/content' : ws.role === 'reviewer' ? '/review' : '/content/all';
+  const renderActions = (f: { id: string }) => { const full = findings.find(x => x.id === f.id); if (!full) return null; return <FindingResolution f={full} action={actionsByFinding.get(f.id)} names={names} canAct={canActOnFindings} canRewrite={type !== 'image'} busy={busy} onAct={(a, o) => onFindingAction(f.id, a, o)} />; };
+  const backTo = is_owner ? '/content' : ws.role === 'reviewer' || admin ? '/review' : '/content/all';
   const automaticFindings = rv ? findings.filter(f => f.review_id === rv.id) : [];
   const aiFindings = ai ? findings.filter(f => f.review_id === ai.id) : [];
   const verifiedCitationCount = aiFindings.filter(f => f.cited_kind !== 'none' && !!f.cited_code).length;
@@ -115,7 +116,7 @@ function ContentDetail() {
     { label: 'Needs checking', value: ai ? aiNeedsCheckingCount : '—', note: ai ? 'AI findings without verification' : 'No AI review saved', Icon: CircleHelp, tone: 'border-amber-200 bg-amber-100/70 text-amber-950', iconTone: 'bg-amber-200 text-amber-900' },
   ];
   return <div className="mx-auto max-w-[1380px]">
-    <Link to={backTo} className="group inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"><span className="flex size-8 items-center justify-center rounded-lg border bg-card transition-colors group-hover:border-brand-blue/30 group-hover:text-brand-blue"><ArrowLeft className="size-4" /></span>{is_owner ? 'My content' : ws.role === 'reviewer' ? 'Review queue' : 'All content'}</Link>
+    <Link to={backTo} className="group inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"><span className="flex size-8 items-center justify-center rounded-lg border bg-card transition-colors group-hover:border-brand-blue/30 group-hover:text-brand-blue"><ArrowLeft className="size-4" /></span>{is_owner ? 'My content' : admin ? 'Reviews' : ws.role === 'reviewer' ? 'Review queue' : 'All content'}</Link>
 
     <section className="mt-5 overflow-hidden rounded-2xl border border-t-4 border-border border-t-brand-blue bg-card shadow-[0_14px_42px_-32px_rgba(15,23,42,0.42)]">
       <div className="flex flex-wrap items-start justify-between gap-5 border-b border-border px-5 py-5 sm:px-7 sm:py-6">
@@ -123,6 +124,7 @@ function ContentDetail() {
           <div className="flex flex-wrap items-center gap-2.5"><span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue"><TypeIcon type={type} /></span><span className="text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">{type} content</span><span className="text-border">/</span><span className="text-sm font-semibold text-brand-navy">Version {c.version}</span><StatusBadge status={status} /></div>
           <h1 className="mt-3 break-words text-2xl font-semibold tracking-tight text-brand-ink sm:text-[2rem]">{c.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground"><span>By {owner_name}</span>{c.submitted_at && <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-3.5" />Submitted {new Date(c.submitted_at).toLocaleString()}</span>}</div>
+          {admin && <p className="mt-2 text-xs text-muted-foreground">Read only · Reviewer: {approvals.length && approvals[approvals.length - 1]?.reviewer_id ? names[approvals[approvals.length - 1]?.reviewer_id ?? ''] ?? 'Workspace member' : 'Not assigned'} · Updated {new Date(c.updated_at).toLocaleString()}</p>}
         </div>
         {editable && <div className="flex w-full flex-wrap gap-2 sm:w-auto">{status === 'draft' && <Button variant="outline" onClick={() => setConfirm('delete')}><Trash2 />Delete draft</Button>}<Button onClick={() => setConfirm('submit')}><Send />{status === 'changes_requested' ? 'Resubmit' : 'Submit'}</Button></div>}
       </div>
@@ -172,7 +174,7 @@ function ContentDetail() {
         {is_owner && status === 'checked' && route_facts && <SendForApproval facts={route_facts} reviewers={reviewers.data as { id: string; name: string }[] | undefined} busy={busy} onSend={r => void send(r)} />}
         {canDecide && openApproval && <DecisionPanel approval={openApproval} busy={busy} onDecide={(d, cm) => void decide(d, cm)} />}
         <ApprovalHistory approvals={approvals as ApprovalRow[]} names={names} />
-        {status !== 'draft' && <CommentsThread comments={comments} names={names} canComment busy={busy} onPost={post} />}
+        {status !== 'draft' && <CommentsThread comments={comments} names={names} canComment={!admin} busy={busy} onPost={post} />}
       </div>
     </div>}
 
@@ -185,6 +187,7 @@ function ContentDetail() {
       <Tabs defaultValue="versions" className="px-4 py-4 sm:px-6">
         <TabsList className="h-auto w-full justify-start gap-1 rounded-xl bg-muted/70 p-1 sm:w-auto"><TabsTrigger value="versions" className="gap-2"><FileText className="size-4" />Version history</TabsTrigger><TabsTrigger value="activity" className="gap-2"><CalendarDays className="size-4" />Activity</TabsTrigger></TabsList>
         <TabsContent value="versions" className="mt-4"><p className="text-sm text-muted-foreground">Every saved version is kept and cannot be changed.</p>
+          {admin && versions.map(v => <details key={`evidence-${v.id}`} className="mt-3 rounded-lg border p-4"><summary className="cursor-pointer text-sm font-medium">Version {v.version_number} — {v.title}</summary><p className="mt-3 whitespace-pre-wrap text-sm">{v.body_text}</p><FindingsPanel review={reviews.find(r => r.content_version_id === v.id && r.source === 'deterministic') ?? null} findings={findings} text={null} canRun={false} running={false} onRun={() => {}} /><AiReviewPanel review={reviews.find(r => r.content_version_id === v.id && r.source === 'ai') ?? null} findings={findings} deterministic={findings.filter(f => f.review_id === reviews.find(r => r.content_version_id === v.id && r.source === 'deterministic')?.id)} imageUrl={null} canRun={false} running={false} onRun={() => {}} lastError={null} /></details>)}
           <ol className="mt-4 divide-y overflow-hidden rounded-xl border bg-background">{versions.map(v => <li key={v.id} className="flex flex-wrap items-center gap-3 p-4 text-sm"><span className="rounded-md bg-brand-blue/10 px-2 py-1 font-semibold text-brand-blue">v{v.version_number}</span><div className="min-w-0 flex-1"><p className="truncate font-medium text-foreground">{v.title}{v.file_name ? ` · ${v.file_name}` : ''}</p><p className="mt-1 text-xs text-muted-foreground">{v.change_summary} · {new Date(v.created_at).toLocaleString()}</p></div>{v.file_path && <Button size="sm" variant="outline" onClick={() => void download(v.id)}><Download />File</Button>}</li>)}</ol></TabsContent>
         <TabsContent value="activity" className="mt-4"><p className="mb-4 text-sm text-muted-foreground">Everything that happened to this content, newest first.</p>
           <ActivityTimeline events={buildActivity({ versions, actions: actions as ActionRow[], approvals: approvals as ApprovalRow[], comments, names, ownerId: c.owner_id, ownerName: owner_name, userId: user_id })} /></TabsContent>

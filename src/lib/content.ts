@@ -9,10 +9,11 @@ export const channels = ['Web', 'Email', 'Social', 'Print', 'Other'] as const;
 export const TEXT_LIMIT = 50_000;
 
 // Spec Part 4: Creators create/submit their own content; Managers read submitted workspace content.
-// Admin has no content access. Reviewers (Phase 6) see only items assigned to them.
+// Admins inspect existing reviews read-only; Reviewers see only items assigned to them.
 export const canCreateContent = (role: Role) => role === 'creator';
 export const canViewWorkspaceContent = (role: Role) => role === 'manager';
 export const canReviewAssigned = (role: Role) => role === 'reviewer';
+export const canInspectReviews = (role: Role) => role === 'admin';
 
 /** Creator submission: from a draft, or resubmitting after changes were requested. Full lifecycle lives in ./approval. */
 export function canTransition(from: ContentStatus, to: ContentStatus) { return (from === 'draft' || from === 'changes_requested') && to === 'submitted'; }

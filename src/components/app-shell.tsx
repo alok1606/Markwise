@@ -27,6 +27,7 @@ import { roleNavigation, type Role } from '@/lib/access';
 import { supabase } from '@/integrations/supabase/client';
 
 const navLinks: Record<string, { to: '/knowledge' | '/users' | '/content' | '/content/new' | '/content/all' | '/review' | '/ai-calls'; icon: typeof Users; active: (path: string) => boolean }> = {
+  Reviews: { to: '/review', icon: ClipboardCheck, active: (path) => path === '/review' || path.startsWith('/content/') },
   'AI Calls': { to: '/ai-calls', icon: Bot, active: (path) => path === '/ai-calls' },
   'Knowledge Base': { to: '/knowledge', icon: BookOpenCheck, active: (path) => path.startsWith('/knowledge') },
   Users: { to: '/users', icon: Users, active: (path) => path === '/users' },
@@ -155,7 +156,7 @@ export function AppShell() {
               <NavItem label="Overview" to="/dashboard" icon={LayoutDashboard} active={location.pathname === '/dashboard'} onNavigate={() => setOpen(false)} />
             </NavGroup>
             {contentItems.length > 0 && (
-              <NavGroup title={current.role === 'reviewer' ? 'Review' : 'Content'}>
+              <NavGroup title={current.role === 'reviewer' || current.role === 'admin' ? 'Reviews' : 'Content'}>
                 {contentItems.map((label) => <RoleNavItem key={label} label={label} path={location.pathname} onNavigate={() => setOpen(false)} />)}
               </NavGroup>
             )}
