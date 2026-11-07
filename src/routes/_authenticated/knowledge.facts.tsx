@@ -21,7 +21,7 @@ const tone: Record<string, string> = { approved: 'border-emerald-200 bg-emerald-
 
 function Facts() {
   const w = useWorkspace(); const { data } = useSuspenseQuery(knowledgeOptions(w.id));
-  const verified = data.facts.filter(isVerifiedFact).length;
+  const verified = data.facts.filter(f => isVerifiedFact(f)).length;
   const pending = data.facts.filter(f => f.status === 'pending').length;
   const remaining = data.facts.length - verified - pending;
   return <>
