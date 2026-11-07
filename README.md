@@ -6,6 +6,8 @@ Markwise is a brand-compliance review tool built for **CodeNexus India 2026**. T
 
 Markwise is a **team-designed and team-directed software engineering project** – see section 12 for full attribution.
 
+**Production:** The approved Markwise redesign is live on [Lovable Cloud](https://markwise-product-studio.lovable.app).
+
 ---
 
 ## 1. Main features (implemented, Phases 1–6)
