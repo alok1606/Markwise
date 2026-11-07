@@ -24,7 +24,7 @@ describe('Admin review boundaries', () => {
     const client = { from: vi.fn((table: string) => {
       const query: Record<string, unknown> = {};
       for (const method of ['select', 'eq', 'in', 'is', 'order']) query[method] = (...args: unknown[]) => { calls.push({ table, method, args }); return query; };
-      query.then = (resolve: (v: unknown) => unknown) => Promise.resolve({ data: data[table], error: null }).then(resolve);
+      query['then'] = (resolve: (v: unknown) => unknown) => Promise.resolve({ data: data[table], error: null }).then(resolve);
       return query;
     }) } as unknown as SupabaseClient;
     const result = await readAdminReviews(client, 'workspace-A');

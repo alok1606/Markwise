@@ -79,10 +79,16 @@ export const listWorkspaceReviewers = createServerFn({ method: 'GET' }).middlewa
   });
 
 /** Items assigned to the signed-in reviewer in this workspace (open first), read under RLS. */
+export const listAdminReviews = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ workspace_id: z.string().uuid() }))
+  .handler(async ({ data, context }) => {
+    if (!(await hasRole(context, data.workspace_id, 'admin'))) throw new Error('Workspace administrator access required');
+    return readAdminReviews(context.supabase, data.workspace_id);
+  });
+
 export const listReviewQueue = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth])
   .inputValidator(z.object({ workspace_id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
-    if (await hasRole(context, data.workspace_id, 'admin')) return readAdminReviews(context.supabase, data.workspace_id);
     if (!(await hasRole(context, data.workspace_id, 'reviewer'))) throw new Error('Only reviewers have a review queue');
     const a = await context.supabase.from('approvals').select('id,content_id,version_number,status,created_at,decided_at').eq('workspace_id', data.workspace_id).eq('reviewer_id', context.userId).order('created_at', { ascending: false });
     fail(a.error);
