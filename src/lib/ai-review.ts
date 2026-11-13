@@ -75,6 +75,7 @@ export function contextForPrompt(sources: AiSource[]) {
 export type ValidatedFinding = {
   category: string; severity: (typeof severities)[number]; confidence: number; span_start: number; span_end: number; quoted_text: string; explanation: string;
   cited_kind: SourceKind | 'none'; cited_id: string | null; cited_code: string; cited_passage: string; outcome: (typeof verdicts)[number];
+  citation_status: 'verified' | 'missing' | 'invalid' | 'unverifiable' | 'not_required';
   suggested_text: string | null; evidence_kind: 'text' | 'image_ocr'; bbox: number[] | null;
 };
 export type ValidationResult = { findings: ValidatedFinding[]; dropped: number; downgraded: number; evidence_text: string };
@@ -106,7 +107,7 @@ export function fromGeminiBox(b: number[] | null): number[] | null {
  * - Tone findings without a cited tone rule: dropped.
  * - Image findings without a valid normalised box: downgraded.
  */
-export function validateAiResponse(raw: unknown, opts: { evidenceText: string | null; isImage: boolean; sources: AiSource[] }): ValidationResult {
+export function validateAiResponse(raw: unknown, opts: { evidenceText: string | null; isImage: boolean; sources: AiSource[]; citationContext?: 'guided' | 'unguided' }): ValidationResult {
   const parsed = aiResponseSchema.safeParse(raw);
   if (!parsed.success) throw new InvalidAiResponseError();
   const evidence = opts.isImage ? (parsed.data.visible_text ?? '') : (opts.evidenceText ?? '');
@@ -123,12 +124,19 @@ export function validateAiResponse(raw: unknown, opts: { evidenceText: string | 
     const isTone = f.category.trim().toLowerCase() === 'tone';
     if (isTone && !(src && src.tone)) { dropped++; continue; }
     used.set(quote, at + Math.max(quote.length, 1));
-    let outcome: ValidatedFinding['outcome'] = f.verdict; let cited: Pick<ValidatedFinding, 'cited_kind' | 'cited_id' | 'cited_code' | 'cited_passage'> = { cited_kind: 'none', cited_id: null, cited_code: '', cited_passage: '' };
+    let outcome: ValidatedFinding['outcome'] = f.verdict; let citation_status: ValidatedFinding['citation_status'] = 'not_required';
+    let cited: Pick<ValidatedFinding, 'cited_kind' | 'cited_id' | 'cited_code' | 'cited_passage'> = { cited_kind: 'none', cited_id: null, cited_code: '', cited_passage: '' };
+    const citationAttempted = !!(f.cited_code?.trim() || f.cited_passage?.trim());
     if (outcome !== 'cannot_verify') {
       const passage = f.cited_passage ?? '';
       const ok = !!src && passage.trim().length > 0 && src.text.toLowerCase().includes(passage.toLowerCase()) && (compatible[outcome] ?? []).includes(src.kind);
-      if (ok) cited = { cited_kind: src!.kind, cited_id: src!.id, cited_code: src!.code, cited_passage: passage };
-      else { outcome = 'cannot_verify'; downgraded++; }
+      if (ok) { citation_status = 'verified'; cited = { cited_kind: src!.kind, cited_id: src!.id, cited_code: src!.code, cited_passage: passage }; }
+      else {
+        citation_status = !citationAttempted ? 'missing' : opts.citationContext === 'unguided' || opts.sources.length === 0 ? 'unverifiable' : 'invalid';
+        outcome = 'cannot_verify'; downgraded++;
+      }
+    } else if (citationAttempted) {
+      citation_status = opts.citationContext === 'unguided' || opts.sources.length === 0 ? 'unverifiable' : 'invalid';
     }
     let bbox: number[] | null = null;
     if (opts.isImage) {
@@ -139,7 +147,7 @@ export function validateAiResponse(raw: unknown, opts: { evidenceText: string | 
     out.push({
       category: (f.category.trim() || 'general').slice(0, 40), severity: f.severity, confidence: Math.min(1, Math.max(0, Number.isFinite(f.confidence) ? f.confidence : 0)),
       span_start: at, span_end: at + quote.length, quoted_text: quote, explanation: f.explanation.slice(0, 2000) || 'No explanation given.', ...cited, outcome,
-      suggested_text: f.suggested_text?.trim() ? f.suggested_text.slice(0, 2000) : null, evidence_kind: opts.isImage ? 'image_ocr' : 'text', bbox,
+      citation_status, suggested_text: f.suggested_text?.trim() ? f.suggested_text.slice(0, 2000) : null, evidence_kind: opts.isImage ? 'image_ocr' : 'text', bbox,
     });
   }
   return { findings: out, dropped, downgraded, evidence_text: evidence };

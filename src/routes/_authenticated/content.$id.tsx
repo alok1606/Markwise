@@ -16,12 +16,14 @@ import { actOnFinding, addComment, decideApproval, submitForApproval } from '@/l
 import { AiReviewPanel } from '@/components/content/ai-review-panel';
 import { readImageColours } from '@/lib/image-colours';
 import { FindingsPanel, Highlighted } from '@/components/content/findings-panel';
+import { OfficeDocumentPreview } from '@/components/content/office-document-preview';
 import { ApprovalHistory, CommentsThread, DecisionPanel, FindingResolution, SendForApproval, type ActionRow, type ApprovalRow } from '@/components/content/review-actions';
 import type { Decision } from '@/lib/approval';
 import { meta } from '@/lib/access';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ActivityTimeline } from '@/components/content/activity-timeline';
 import { buildActivity } from '@/lib/activity';
+import type { OfficeTextBlock } from '@/lib/office-documents';
 
 export const Route = createFileRoute('/_authenticated/content/$id')({ head: () => meta('Content review', 'Content, findings, approval and version history.'), component: ContentDetail });
 
@@ -80,7 +82,7 @@ function ContentDetail() {
     setBusy(true);
     try {
       const r = await actFn({ data: { workspace_id: ws.id, id, expected_version: c.version, finding_id: findingId, action, reason: opts.reason ?? null, final_text: opts.final_text ?? null } });
-      toast.success(action === 'dismissed' ? 'Finding dismissed' : `Version ${r.version} saved and checked again`); if (action !== 'dismissed') recheckToasts(r); return true;
+      toast.success(action === 'dismissed' ? 'Finding dismissed' : `Version ${r.version} saved and checked again`); if (action !== 'dismissed') { recheckToasts(r); if (r.document_map_error) toast.warning(r.document_map_error); } return true;
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Action failed'); return false; } finally { setBusy(false); await refresh(); }
   }
   async function send(reviewerId: string | null) {
@@ -153,9 +155,10 @@ function ContentDetail() {
         <div className="bg-[#fbfaf6] px-5 py-6 sm:px-8 sm:py-8 xl:max-h-[min(68vh,780px)] xl:overflow-y-auto">
           {type === 'image' && file_url && <img src={file_url} alt={c.alt_text || ''} className="mx-auto max-h-[32rem] rounded-lg border object-contain" />}
           {type === 'image' && <p className="mt-4 rounded-lg bg-muted/50 p-3 text-sm"><span className="font-medium text-muted-foreground">Alt text: </span>{c.alt_text || <em>empty</em>}{c.text_color ? ` · text ${c.text_color}` : ''}{c.background_color ? ` · background ${c.background_color}` : ''}</p>}
-          {type !== 'image' && <div className="mx-auto max-w-[68ch] font-serif text-[15px] leading-8 text-slate-800">{latest && latestFindings.some(f => f.span_start !== null) ? <Highlighted text={latest.body_text} findings={latestFindings} /> : <p className="whitespace-pre-wrap">{c.body_text || 'No text.'}</p>}</div>}
-          {type === 'pdf' && file_url && <a href={file_url} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium text-brand-blue hover:bg-muted"><Download className="size-4" />Open original PDF</a>}
-          <p className="mt-6 border-t pt-4 text-xs leading-relaxed text-muted-foreground">Showing version {c.version}. Highlights are underlined and match findings for this exact version.{type === 'pdf' ? ' Rewrites change confirmed text, not the original file.' : ''}</p>
+          {type !== 'image' && type !== 'docx' && type !== 'pptx' && <div className="mx-auto max-w-[68ch] font-serif text-[15px] leading-8 text-slate-800">{latest && latestFindings.some(f => f.span_start !== null) ? <Highlighted text={latest.body_text} findings={latestFindings} /> : <p className="whitespace-pre-wrap">{c.body_text || 'No text.'}</p>}</div>}
+          {(type === 'docx' || type === 'pptx') && <OfficeDocumentPreview blocks={(latest?.document_blocks ?? null) as OfficeTextBlock[] | null} text={latest?.body_text ?? c.body_text} findings={latestFindings} />}
+          {type !== 'image' && type !== 'text' && latest?.file_path && <Button className="mt-5" size="sm" variant="outline" onClick={() => void download(latest.id)}><Download className="size-4" />Open original {type === 'pdf' ? 'PDF' : type === 'docx' ? 'Word document' : 'PowerPoint'}</Button>}
+          <p className="mt-6 border-t pt-4 text-xs leading-relaxed text-muted-foreground">Showing version {c.version}. Highlights are underlined and match findings for this exact version.{type === 'pdf' ? ' Rewrites change confirmed text, not the original file.' : type === 'docx' || type === 'pptx' ? ' Rewrites update the checked text only; the original Office file remains unchanged.' : ''}</p>
         </div>
       </section>
 
@@ -179,7 +182,7 @@ function ContentDetail() {
     </div>}
 
     {editable && <div className="mt-5">{type === 'image' && file_url && <img src={file_url} alt={c.alt_text || ''} className="mb-4 max-h-72 rounded-xl border" />}
-      <ContentEditor key={c.version} workspaceId={ws.id} existing={{ id: c.id, version: c.version, type, file_name: c.file_name, fields: { title: c.title, channel: c.channel, audience: c.audience, goal: c.goal, body_text: c.body_text, alt_text: c.alt_text, text_color: c.text_color, background_color: c.background_color } }} onSaved={() => void refresh()} />
+      <ContentEditor key={c.version} workspaceId={ws.id} existing={{ id: c.id, version: c.version, type, file_name: c.file_name, document_blocks: (latest?.document_blocks ?? null) as OfficeTextBlock[] | null, fields: { title: c.title, channel: c.channel, audience: c.audience, goal: c.goal, body_text: c.body_text, alt_text: c.alt_text, text_color: c.text_color, background_color: c.background_color } }} onSaved={() => void refresh()} />
       {status === 'changes_requested' && <><ApprovalHistory approvals={approvals as ApprovalRow[]} names={names} /><CommentsThread comments={comments} names={names} canComment busy={busy} onPost={post} /></>}</div>}
 
     <section className="mt-7 overflow-hidden rounded-2xl border border-t-4 border-t-violet-300 bg-card shadow-sm" aria-label="Version history and activity">

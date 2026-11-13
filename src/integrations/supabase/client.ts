@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { brokeredPreviewStorage } from './previewAuthStorage';
+import { assertStagingProjectTarget, assertStagingPublishableKey } from './staging-target';
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
@@ -47,10 +48,24 @@ function createSupabaseFetch(supabaseUrl: string, supabaseKey: string): typeof f
 
 
 function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env['VITE_SUPABASE_URL'] || process.env['SUPABASE_URL'];
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] || process.env['SUPABASE_PUBLISHABLE_KEY'];
+  const stagingMode = import.meta.env['VITE_MARKWISE_STAGING_MODE'] === 'true';
+  const browserUrl = import.meta.env['VITE_SUPABASE_URL'];
+  const browserKey = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
+  if (stagingMode) {
+    assertStagingProjectTarget({
+      enabled: true,
+      expectedProjectRef: import.meta.env['VITE_MARKWISE_EXPECTED_SUPABASE_PROJECT_REF'],
+      browserExpectedProjectRef: import.meta.env['VITE_MARKWISE_EXPECTED_SUPABASE_PROJECT_REF'],
+      browserUrl,
+      // The client build cannot read server-only SUPABASE_URL. Server startup validates both URLs.
+      serverUrl: browserUrl,
+    });
+    assertStagingPublishableKey(browserKey);
+  }
+
+  // Production retains its existing environment fallback. Staging requires the VITE_* values directly.
+  const SUPABASE_URL = stagingMode ? browserUrl : browserUrl || process.env['SUPABASE_URL'];
+  const SUPABASE_PUBLISHABLE_KEY = stagingMode ? browserKey : browserKey || process.env['SUPABASE_PUBLISHABLE_KEY'];
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [

@@ -9,7 +9,7 @@ const url = process.env['SUPABASE_URL']; const key = process.env['SUPABASE_PUBLI
 
 describe.skipIf(!fixturePath || !url || !key || !service)('Live AI call log access', { timeout: 120_000 }, () => {
   const c: Record<string, SupabaseClient> = {}; const uid: Record<string, string> = {}; const ids: Record<string, string> = {};
-  const admin = createClient(url!, service!, { auth: { persistSession: false } });
+  let admin: SupabaseClient;
   async function seed(creator: string, ws: string, tag: string) {
     const id = (await c[creator]!.rpc('create_content', { _workspace_id: ws, _type: 'text', _title: tag, _channel: '', _audience: '', _goal: '', _body_text: 'Private body text', _alt_text: null as never, _text_color: null as never, _background_color: null as never })).data as string;
     const vid = (await admin.from('content_versions').select('id').eq('content_id', id).single()).data!.id as string;
@@ -18,6 +18,7 @@ describe.skipIf(!fixturePath || !url || !key || !service)('Live AI call log acce
     ids[tag] = id;
   }
   beforeAll(async () => {
+    admin = createClient(url!, service!, { auth: { persistSession: false } });
     const f = JSON.parse(readFileSync(fixturePath!, 'utf8')) as { workspaceA: string; workspaceB: string; accounts: { role: string; email: string; password: string }[] };
     for (const a of f.accounts) {
       const client = createClient(url!, key!, { auth: { persistSession: false } });

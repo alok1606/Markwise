@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canCreateContent, canTransition, canViewWorkspaceContent, checkContentFile, contentFieldsSchema, contentPathPattern, fieldsForType, isEditable, sniffMime, TEXT_LIMIT } from '@/lib/content';
+import { canCreateContent, canTransition, canViewWorkspaceContent, checkContentFile, contentFieldsSchema, contentPathPattern, fieldsForType, isEditable, needsExtractedTextConfirmation, sniffMime, TEXT_LIMIT } from '@/lib/content';
 
 const base = { title: 'Launch post', channel: 'Web', audience: '', goal: '', body_text: '', alt_text: null, text_color: null, background_color: null };
 const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
@@ -47,6 +47,25 @@ describe('file signatures', () => {
     expect(checkContentFile('pdf', pdf, 20 * 1024 * 1024 + 1, 'pdf')).toMatch(/too large/);
   });
   it('accepts valid files', () => { expect(checkContentFile('image', png, 100, 'png')).toBeNull(); });
+  it('accepts DOCX/PPTX ZIP signatures only with their matching extensions', () => {
+    const zip = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0]);
+    expect(checkContentFile('docx', zip, zip.length, 'docx')).toBeNull();
+    expect(checkContentFile('pptx', zip, zip.length, 'pptx')).toBeNull();
+    expect(checkContentFile('docx', zip, zip.length, 'pptx')).toMatch(/do not match/);
+    expect(checkContentFile('pptx', new Uint8Array([1, 2, 3, 4]), 4, 'pptx')).toMatch(/Unsupported/);
+    expect(checkContentFile('docx', zip, 20 * 1024 * 1024 + 1, 'docx')).toMatch(/too large/);
+  });
+});
+describe('Office/PDF extraction confirmation', () => {
+  it.each(['pdf', 'docx', 'pptx'] as const)('%s requires confirmation for a newly selected file', type => {
+    expect(needsExtractedTextConfirmation(type, true, false)).toBe(true);
+    expect(needsExtractedTextConfirmation(type, true, true)).toBe(false);
+    expect(needsExtractedTextConfirmation(type, false, false)).toBe(false);
+  });
+  it('does not require extraction confirmation for text or image content', () => {
+    expect(needsExtractedTextConfirmation('text', true, false)).toBe(false);
+    expect(needsExtractedTextConfirmation('image', true, false)).toBe(false);
+  });
 });
 describe('storage paths', () => {
   const ws = '11111111-1111-1111-1111-111111111111', id = '22222222-2222-2222-2222-222222222222';

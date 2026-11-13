@@ -19,7 +19,7 @@ export async function readAdminReviews(client: SupabaseClient, workspaceId: stri
   return (content.data ?? []).map(c => {
     const latest = (approvals.data ?? []).find(a => a.content_id === c.id);
     return { ...c, owner_name: names.get(c.owner_id) || 'Workspace member', reviewer_name: latest?.reviewer_id ? names.get(latest.reviewer_id) || 'Workspace member' : 'Not assigned' };
-  }) as { id: string; title: string; type: 'text' | 'image' | 'pdf'; channel: string; status: string; version: number; owner_id: string; submitted_at: string | null; updated_at: string; owner_name: string; reviewer_name: string }[];
+  }) as { id: string; title: string; type: 'text' | 'image' | 'pdf' | 'docx' | 'pptx'; channel: string; status: string; version: number; owner_id: string; submitted_at: string | null; updated_at: string; owner_name: string; reviewer_name: string }[];
 }
 
 export function filterAdminReviews<T extends { title: string; owner_name: string; reviewer_name: string; status: string }>(rows: T[], search: string, status: string) {

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { sortBySeverity } from '@/lib/approval';
 
 type Finding = { id: string; review_id: string; check_name: string; severity: string; span_start: number | null; span_end: number | null; quoted_text: string; explanation: string; cited_kind: string; cited_code: string; cited_passage: string; outcome: string };
+type HighlightFinding = Omit<Finding, 'review_id'> & { review_id?: string };
 type Review = { id: string; version_number: number; run_at: string; status: string; dropped_findings_count: number; finding_count: number; limitations: unknown };
 
 const checkLabel: Record<string, string> = { banned_term: 'Banned terms', terminology: 'Terminology', numeric_claim: 'Numeric claims', alt_text: 'Image accessibility', contrast: 'Contrast', palette: 'Palette' };
@@ -15,7 +16,7 @@ const severityTone: Record<string, string> = {
 };
 
 /** Highlights finding spans using UTF-16 offsets into the exact checked version text. */
-export function Highlighted({ text, findings }: { text: string; findings: Finding[] }) {
+export function Highlighted({ text, findings }: { text: string; findings: HighlightFinding[] }) {
   const spans = findings.filter(f => f.span_start !== null && f.span_end !== null).sort((a, b) => a.span_start! - b.span_start! || b.span_end! - a.span_end!);
   const parts: React.ReactNode[] = []; let at = 0;
   for (const f of spans) {

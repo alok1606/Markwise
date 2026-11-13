@@ -9,6 +9,16 @@ export class AiReviewError extends Error { constructor(public kind: AiErrorKind)
 const IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const categories = 'legal, claim, terminology, tone, visual, accessibility';
 
+export function buildReviewContext(sources: ReturnType<typeof buildSources>) {
+  return `Approved sources for this workspace (JSON):\n${contextForPrompt(sources)}\n\nUse category values from: ${categories}. cited_code must be one of the codes above or null. cited_passage must be copied exactly from that source's text. quoted_text must be copied exactly, character for character. Use verdict violation for a breach of a rule or use of a glossary avoided term; use supported or contradicted only for claims checked against facts.`;
+}
+
+/** Shared text prompt assembly for production reviews and the labelled accuracy harness. */
+export function buildTextReviewMessages(text: string, sources: ReturnType<typeof buildSources>): ModelMessage[] {
+  const ctx = buildReviewContext(sources);
+  return [{ role: 'user', content: `${ctx}\n\nContent to review (between the markers):\n<<<CONTENT\n${text}\nCONTENT>>>\n\nSet visible_text to null and bbox to null.` }];
+}
+
 async function sha256Hex(buf: Uint8Array) {
   const d = await crypto.subtle.digest('SHA-256', buf as Uint8Array<ArrayBuffer>);
   return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -44,9 +54,8 @@ export async function executeAiReview(deps: { caller: SupabaseClient; admin: Sup
   ]);
   if (rules.error || facts.error || glossary.error) throw new Error('Unable to load workspace guidelines for the AI review');
   const sources = buildSources((rules.data ?? []) as RuleRow[], (facts.data ?? []) as FactRow[], (glossary.data ?? []) as GlossaryRow[], deps.today ?? new Date().toISOString().slice(0, 10));
+  const ctx = buildReviewContext(sources);
   const counts = `${sources.filter(s => s.kind === 'rule').length} rules, ${sources.filter(s => s.kind === 'fact').length} facts, ${sources.filter(s => s.kind === 'glossary').length} glossary`;
-  const ctx = `Approved sources for this workspace (JSON):\n${contextForPrompt(sources)}\n\nUse category values from: ${categories}. cited_code must be one of the codes above or null. cited_passage must be copied exactly from that source's text. quoted_text must be copied exactly, character for character. Use verdict violation for a breach of a rule or use of a glossary avoided term; use supported or contradicted only for claims checked against facts.`;
-
   let messages: ModelMessage[]; let summary: string; let sha: string | null = null; let evidenceText: string | null = null;
   if (isImage) {
     if (!v.file_path || !v.file_mime || !IMAGE_MIME.has(v.file_mime)) { await log('failed', 'unsupported_file', `image; unsupported or missing file; ${counts}`); throw new AiReviewError('unsupported_file'); }
@@ -62,7 +71,7 @@ export async function executeAiReview(deps: { caller: SupabaseClient; admin: Sup
     const text: string = v.body_text ?? ''; evidenceText = text;
     if (!text.trim()) { await log('failed', 'unsupported_file', `${row.data.type}; no text; ${counts}`); throw new AiReviewError('unsupported_file'); }
     summary = `${row.data.type}; ${text.length} characters of submitted text; ${counts}`;
-    messages = [{ role: 'user', content: `${ctx}\n\nContent to review (between the markers):\n<<<CONTENT\n${text}\nCONTENT>>>\n\nSet visible_text to null and bbox to null.` }];
+    messages = buildTextReviewMessages(text, sources);
   }
 
   let raw: unknown;

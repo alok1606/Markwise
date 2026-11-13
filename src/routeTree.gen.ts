@@ -17,8 +17,10 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HowAiWorksRouteImport } from './routes/how-ai-works'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as AuthenticatedAccuracyRouteImport } from './routes/_authenticated/accuracy'
 import { Route as AuthenticatedAiCallsRouteImport } from './routes/_authenticated/ai-calls'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedFactImpactRouteImport } from './routes/_authenticated/fact-impact'
 import { Route as AuthenticatedHelpRouteImport } from './routes/_authenticated/help'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
@@ -76,6 +78,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAccuracyRoute = AuthenticatedAccuracyRouteImport.update({
+  id: '/accuracy',
+  path: '/accuracy',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAiCallsRoute = AuthenticatedAiCallsRouteImport.update({
   id: '/ai-calls',
   path: '/ai-calls',
@@ -84,6 +91,11 @@ const AuthenticatedAiCallsRoute = AuthenticatedAiCallsRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFactImpactRoute = AuthenticatedFactImpactRouteImport.update({
+  id: '/fact-impact',
+  path: '/fact-impact',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedHelpRoute = AuthenticatedHelpRouteImport.update({
@@ -188,8 +200,10 @@ export interface FileRoutesByFullPath {
   '/how-ai-works': typeof HowAiWorksRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/accuracy': typeof AuthenticatedAccuracyRoute
   '/ai-calls': typeof AuthenticatedAiCallsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/fact-impact': typeof AuthenticatedFactImpactRoute
   '/help': typeof AuthenticatedHelpRoute
   '/knowledge': typeof AuthenticatedKnowledgeRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
@@ -216,8 +230,10 @@ export interface FileRoutesByTo {
   '/how-ai-works': typeof HowAiWorksRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/accuracy': typeof AuthenticatedAccuracyRoute
   '/ai-calls': typeof AuthenticatedAiCallsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/fact-impact': typeof AuthenticatedFactImpactRoute
   '/help': typeof AuthenticatedHelpRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/review': typeof AuthenticatedReviewRoute
@@ -245,8 +261,10 @@ export interface FileRoutesById {
   '/how-ai-works': typeof HowAiWorksRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/_authenticated/accuracy': typeof AuthenticatedAccuracyRoute
   '/_authenticated/ai-calls': typeof AuthenticatedAiCallsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/fact-impact': typeof AuthenticatedFactImpactRoute
   '/_authenticated/help': typeof AuthenticatedHelpRoute
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRouteWithChildren
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
@@ -275,8 +293,10 @@ export interface FileRouteTypes {
     | '/how-ai-works'
     | '/reset-password'
     | '/signup'
+    | '/accuracy'
     | '/ai-calls'
     | '/dashboard'
+    | '/fact-impact'
     | '/help'
     | '/knowledge'
     | '/profile'
@@ -303,8 +323,10 @@ export interface FileRouteTypes {
     | '/how-ai-works'
     | '/reset-password'
     | '/signup'
+    | '/accuracy'
     | '/ai-calls'
     | '/dashboard'
+    | '/fact-impact'
     | '/help'
     | '/profile'
     | '/review'
@@ -331,8 +353,10 @@ export interface FileRouteTypes {
     | '/how-ai-works'
     | '/reset-password'
     | '/signup'
+    | '/_authenticated/accuracy'
     | '/_authenticated/ai-calls'
     | '/_authenticated/dashboard'
+    | '/_authenticated/fact-impact'
     | '/_authenticated/help'
     | '/_authenticated/knowledge'
     | '/_authenticated/profile'
@@ -421,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/accuracy': {
+      id: '/_authenticated/accuracy'
+      path: '/accuracy'
+      fullPath: '/accuracy'
+      preLoaderRoute: typeof AuthenticatedAccuracyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ai-calls': {
       id: '/_authenticated/ai-calls'
       path: '/ai-calls'
@@ -433,6 +464,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/fact-impact': {
+      id: '/_authenticated/fact-impact'
+      path: '/fact-impact'
+      fullPath: '/fact-impact'
+      preLoaderRoute: typeof AuthenticatedFactImpactRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/help': {
@@ -585,8 +623,10 @@ const AuthenticatedKnowledgeRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAccuracyRoute: typeof AuthenticatedAccuracyRoute
   AuthenticatedAiCallsRoute: typeof AuthenticatedAiCallsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFactImpactRoute: typeof AuthenticatedFactImpactRoute
   AuthenticatedHelpRoute: typeof AuthenticatedHelpRoute
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRouteWithChildren
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
@@ -600,8 +640,10 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAccuracyRoute: AuthenticatedAccuracyRoute,
   AuthenticatedAiCallsRoute: AuthenticatedAiCallsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFactImpactRoute: AuthenticatedFactImpactRoute,
   AuthenticatedHelpRoute: AuthenticatedHelpRoute,
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRouteWithChildren,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
