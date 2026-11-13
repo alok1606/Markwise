@@ -8,8 +8,10 @@ import {
   ChevronDown,
   CircleHelp,
   ClipboardCheck,
+  ChartNoAxesCombined,
   FilePlus2,
   Files,
+  History,
   LayoutDashboard,
   LockKeyhole,
   LogOut,
@@ -26,8 +28,10 @@ import { accessOptions } from '@/lib/queries';
 import { roleNavigation, type Role } from '@/lib/access';
 import { supabase } from '@/integrations/supabase/client';
 
-const navLinks: Record<string, { to: '/knowledge' | '/users' | '/content' | '/content/new' | '/content/all' | '/review' | '/ai-calls'; icon: typeof Users; active: (path: string) => boolean }> = {
+const navLinks: Record<string, { to: '/knowledge' | '/users' | '/content' | '/content/new' | '/content/all' | '/review' | '/ai-calls' | '/accuracy' | '/fact-impact'; icon: typeof Users; active: (path: string) => boolean }> = {
   Reviews: { to: '/review', icon: ClipboardCheck, active: (path) => path === '/review' || path.startsWith('/content/') },
+  Accuracy: { to: '/accuracy', icon: ChartNoAxesCombined, active: (path) => path === '/accuracy' },
+  'Fact Impact': { to: '/fact-impact', icon: History, active: (path) => path === '/fact-impact' },
   'AI Calls': { to: '/ai-calls', icon: Bot, active: (path) => path === '/ai-calls' },
   'Knowledge Base': { to: '/knowledge', icon: BookOpenCheck, active: (path) => path.startsWith('/knowledge') },
   Users: { to: '/users', icon: Users, active: (path) => path === '/users' },
@@ -86,9 +90,9 @@ export function AppShell() {
   }
 
   const visibleItems = roleNavigation[current.role];
-  const contentItems = visibleItems.filter((label) => !['Knowledge Base', 'Users', 'AI Calls'].includes(label));
+  const contentItems = visibleItems.filter((label) => !['Knowledge Base', 'Users', 'AI Calls', 'Accuracy'].includes(label));
   const governanceItems = visibleItems.filter((label) => label === 'Knowledge Base');
-  const adminItems = visibleItems.filter((label) => label === 'Users' || label === 'AI Calls');
+  const adminItems = visibleItems.filter((label) => ['Accuracy', 'Fact Impact', 'Users', 'AI Calls'].includes(label));
 
   return (
     <WorkspaceContext.Provider value={current}>
@@ -230,7 +234,7 @@ function RoleNavItem({ label, path, onNavigate }: { label: string; path: string;
 
 function NavItem({ label, to, icon: Icon, active, onNavigate }: {
   label: string;
-  to: '/dashboard' | '/profile' | '/settings' | '/help' | '/knowledge' | '/users' | '/content' | '/content/new' | '/content/all' | '/review' | '/ai-calls';
+  to: '/dashboard' | '/profile' | '/settings' | '/help' | '/knowledge' | '/users' | '/content' | '/content/new' | '/content/all' | '/review' | '/ai-calls' | '/accuracy' | '/fact-impact';
   icon: typeof Users;
   active: boolean;
   onNavigate: () => void;

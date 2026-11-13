@@ -174,7 +174,7 @@ export function validateSpans(text: string, findings: Finding[]): { kept: Findin
 }
 
 export type CheckInput = {
-  type: 'text' | 'image' | 'pdf'; body_text: string; alt_text: string | null; text_color: string | null; background_color: string | null;
+  type: 'text' | 'image' | 'pdf' | 'docx' | 'pptx'; body_text: string; alt_text: string | null; text_color: string | null; background_color: string | null;
   rules: BannedRule[]; glossary: GlossaryEntry[]; palette: PaletteColour[]; colour_samples: ColourSample[] | null; image_error?: string | null;
 };
 /** Runs all applicable checks for one exact content version. */

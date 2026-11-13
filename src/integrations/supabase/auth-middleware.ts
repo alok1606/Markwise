@@ -3,6 +3,7 @@ import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
+import { assertStagingProjectTarget } from './staging-target'
 
 
 
@@ -33,9 +34,17 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
-    
+    const stagingMode = process.env['MARKWISE_STAGING_MODE'] === 'true' || import.meta.env['VITE_MARKWISE_STAGING_MODE'] === 'true';
     const SUPABASE_URL = process.env['SUPABASE_URL'];
     const SUPABASE_PUBLISHABLE_KEY = process.env['SUPABASE_PUBLISHABLE_KEY'];
+
+    assertStagingProjectTarget({
+      enabled: stagingMode,
+      expectedProjectRef: process.env['MARKWISE_EXPECTED_SUPABASE_PROJECT_REF'],
+      browserExpectedProjectRef: import.meta.env['VITE_MARKWISE_EXPECTED_SUPABASE_PROJECT_REF'],
+      browserUrl: import.meta.env['VITE_SUPABASE_URL'],
+      serverUrl: SUPABASE_URL,
+    });
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
       const missing = [

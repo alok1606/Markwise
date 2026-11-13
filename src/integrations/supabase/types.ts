@@ -14,6 +14,149 @@ export type Database = {
   }
   public: {
     Tables: {
+      accuracy_evaluation_runs: {
+        Row: {
+          ai_calls: number
+          as_of_date: string
+          batch_lease_token: string | null
+          completed_at: string | null
+          completed_cases: number
+          created_at: string
+          dataset_sha256: string
+          dataset_version: string
+          error_summary: string | null
+          evaluator_version: string
+          id: string
+          lease_expires_at: string | null
+          metrics: Json | null
+          model: string
+          prompt_version: string
+          requested_by: string
+          started_at: string | null
+          status: string
+          total_cases: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ai_calls?: number
+          as_of_date: string
+          batch_lease_token?: string | null
+          completed_at?: string | null
+          completed_cases?: number
+          created_at?: string
+          dataset_sha256: string
+          dataset_version: string
+          error_summary?: string | null
+          evaluator_version: string
+          id?: string
+          lease_expires_at?: string | null
+          metrics?: Json | null
+          model: string
+          prompt_version: string
+          requested_by: string
+          started_at?: string | null
+          status?: string
+          total_cases: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ai_calls?: number
+          as_of_date?: string
+          batch_lease_token?: string | null
+          completed_at?: string | null
+          completed_cases?: number
+          created_at?: string
+          dataset_sha256?: string
+          dataset_version?: string
+          error_summary?: string | null
+          evaluator_version?: string
+          id?: string
+          lease_expires_at?: string | null
+          metrics?: Json | null
+          model?: string
+          prompt_version?: string
+          requested_by?: string
+          started_at?: string | null
+          status?: string
+          total_cases?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          { foreignKeyName: "accuracy_evaluation_runs_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
+      accuracy_evaluation_results: {
+        Row: {
+          ai_call_count: number
+          ai_error: string | null
+          ai_status: string
+          case_key: string
+          case_title: string
+          created_at: string
+          deterministic_status: string
+          duration_ms: number
+          expected_ai: Json
+          expected_deterministic: Json
+          id: string
+          input_text: string
+          predicted_ai_unguided: Json | null
+          predicted_ai: Json | null
+          predicted_deterministic: Json
+          run_id: string
+          unguided_ai_error: string | null
+          unguided_ai_status: string | null
+          workspace_id: string
+        }
+        Insert: {
+          ai_call_count?: number
+          ai_error?: string | null
+          ai_status: string
+          case_key: string
+          case_title: string
+          created_at?: string
+          deterministic_status: string
+          duration_ms: number
+          expected_ai: Json
+          expected_deterministic: Json
+          id?: string
+          input_text: string
+          predicted_ai_unguided?: Json | null
+          predicted_ai?: Json | null
+          predicted_deterministic: Json
+          run_id: string
+          unguided_ai_error?: string | null
+          unguided_ai_status?: string | null
+          workspace_id: string
+        }
+        Update: {
+          ai_call_count?: number
+          ai_error?: string | null
+          ai_status?: string
+          case_key?: string
+          case_title?: string
+          created_at?: string
+          deterministic_status?: string
+          duration_ms?: number
+          expected_ai?: Json
+          expected_deterministic?: Json
+          id?: string
+          input_text?: string
+          predicted_ai_unguided?: Json | null
+          predicted_ai?: Json | null
+          predicted_deterministic?: Json
+          run_id?: string
+          unguided_ai_error?: string | null
+          unguided_ai_status?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          { foreignKeyName: "accuracy_evaluation_results_run_id_workspace_id_fkey"; columns: ["run_id", "workspace_id"]; isOneToOne: false; referencedRelation: "accuracy_evaluation_runs"; referencedColumns: ["id", "workspace_id"] },
+          { foreignKeyName: "accuracy_evaluation_results_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
       ai_calls: {
         Row: {
           content_id: string
@@ -533,6 +676,15 @@ export type Database = {
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      content_document_maps: {
+        Row: { blocks: Json; content_version_id: string; created_at: string; workspace_id: string }
+        Insert: { blocks: Json; content_version_id: string; created_at?: string; workspace_id: string }
+        Update: { blocks?: Json; content_version_id?: string; created_at?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "content_document_maps_content_version_id_fkey"; columns: ["content_version_id"]; isOneToOne: true; referencedRelation: "content_versions"; referencedColumns: ["id"] },
+          { foreignKeyName: "content_document_maps_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
         ]
       }
       contents: {
@@ -1515,6 +1667,10 @@ export type Database = {
         }
         Returns: number
       }
+      set_content_document_map: {
+        Args: { _actor: string; _blocks: Json; _content_id: string; _content_version_id: string }
+        Returns: undefined
+      }
       submit_content: {
         Args: { _content_id: string; _expected_version: number }
         Returns: undefined
@@ -1540,7 +1696,7 @@ export type Database = {
         | "checked"
         | "pending_manager"
         | "pending_reviewer"
-      content_type: "text" | "image" | "pdf"
+      content_type: "text" | "image" | "pdf" | "docx" | "pptx"
       fact_status: "pending" | "approved" | "rejected" | "expired"
       rule_category:
         | "legal"
@@ -1691,7 +1847,7 @@ export const Constants = {
         "pending_manager",
         "pending_reviewer",
       ],
-      content_type: ["text", "image", "pdf"],
+      content_type: ["text", "image", "pdf", "docx", "pptx"],
       fact_status: ["pending", "approved", "rejected", "expired"],
       rule_category: [
         "legal",

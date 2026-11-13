@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { runChecks, type BannedRule, type ColourSample, type GlossaryEntry } from './checks';
 import { executeAiReview, AiReviewError } from './ai-review.server';
 import { checkContentFile, contentFieldsSchema, contentPathPattern, contentTypes, fieldsForType, type ContentType } from './content';
+import { validateOfficePackage, type OfficeTextBlock } from './office-documents';
 
 export type RouteFacts = { version: number; version_id: string; status: string; ai_state: 'completed' | 'failed' | 'pending'; blocking: number; route: 'manager' | 'reviewer'; check_outcome?: 'completed' | 'completed_with_warnings' | 'failed'; limitations?: string[]; reasons?: string[] };
 type Ctx = { supabase: any; userId: string }; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -52,6 +53,9 @@ export const getContent = createServerFn({ method: 'GET' }).middleware([requireS
   const c = row.data;
   const versions = await context.supabase.from('content_versions').select('id,version_number,title,body_text,file_name,file_path,alt_text,text_color,background_color,change_summary,changed_by,created_at').eq('workspace_id', data.workspace_id).eq('content_id', c.id).order('version_number', { ascending: false });
   fail(versions.error);
+  const maps = versions.data?.length ? await context.supabase.from('content_document_maps').select('content_version_id,blocks').eq('workspace_id', data.workspace_id).in('content_version_id', versions.data.map((v: { id: string }) => v.id)) : { data: [], error: null };
+  fail(maps.error);
+  const mapByVersion = new Map((maps.data ?? []).map(map => [map.content_version_id, map.blocks as unknown as OfficeTextBlock[]] as const));
   let file_url: string | null = null;
   if (c.file_path) { const s = await context.supabase.storage.from('content-files').createSignedUrl(c.file_path, 600); file_url = s.data?.signedUrl ?? null; }
   const owner = await context.supabase.from('profiles').select('full_name,email').eq('id', c.owner_id).maybeSingle();
@@ -70,7 +74,7 @@ export const getContent = createServerFn({ method: 'GET' }).middleware([requireS
   const people = new Set<string>([...(actions.data ?? []).map((a: { actor_id: string }) => a.actor_id), ...(approvals.data ?? []).flatMap((a: { reviewer_id: string | null; decided_by: string | null; assigned_by: string }) => [a.reviewer_id, a.decided_by, a.assigned_by]), ...(comments.data ?? []).map((x: { author_id: string }) => x.author_id)].filter(Boolean) as string[]);
   const names: Record<string, string> = {};
   if (people.size) { const p = await context.supabase.from('profiles').select('id,full_name,email').in('id', [...people]); for (const x of p.data ?? []) names[x.id] = x.full_name || x.email; }
-  return { content: c, versions: versions.data ?? [], reviews: reviews.data ?? [], findings: findings.data ?? [], file_url, owner_name: owner.data?.full_name || owner.data?.email || 'Workspace member',
+  return { content: c, versions: (versions.data ?? []).map(v => ({ ...v, document_blocks: mapByVersion.get(v.id) ?? null })), reviews: reviews.data ?? [], findings: findings.data ?? [], file_url, owner_name: owner.data?.full_name || owner.data?.email || 'Workspace member',
     is_owner: c.owner_id === context.userId && role === 'creator', role, user_id: context.userId,
     actions: actions.data ?? [], approvals: approvals.data ?? [], comments: comments.data ?? [], route_facts: (facts.data ?? null) as RouteFacts | null, names };
 });
@@ -177,12 +181,54 @@ export const registerContentFile = createServerFn({ method: 'POST' }).middleware
   const discard = async () => { await supabaseAdmin.storage.from('content-files').remove([data.path]); };
   const file = await context.supabase.storage.from('content-files').download(data.path);
   if (file.error || !file.data) throw new Error('Upload not found; please try again');
+  if (file.data.size <= 0 || file.data.size > 20 * 1024 * 1024) {
+    await discard(); throw new Error('Content files must be non-empty and no larger than 20 MB.');
+  }
   const buf = new Uint8Array(await file.data.arrayBuffer());
   const ext = data.path.split('.').pop() ?? '';
-  const problem = checkContentFile(row.data.type as Exclude<ContentType, 'text'>, buf.subarray(0, 16), buf.byteLength, ext);
+  const type = row.data.type as Exclude<ContentType, 'text'>;
+  let problem = checkContentFile(type, buf.subarray(0, 16), buf.byteLength, ext);
+  if (!problem && (type === 'docx' || type === 'pptx')) {
+    try { await validateOfficePackage(buf, type, ext); } catch (error) { problem = error instanceof Error ? error.message : 'The Office document is invalid.'; }
+  }
   if (problem) { await discard(); throw new Error(problem); }
-  const mime = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', pdf: 'application/pdf' }[ext]!;
+  const mime = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }[ext]!;
   const r = await supabaseAdmin.rpc('set_content_file', { _actor: context.userId, _content_id: data.id, _expected_version: data.expected_version, _file_path: data.path, _file_name: data.name, _file_mime: mime, _file_size: buf.byteLength });
   if (r.error) { await discard(); throw new Error(r.error.message); }
   return { version: r.data as number };
 });
+
+const documentBlockSchema = z.object({
+  kind: z.enum(['paragraph', 'table_cell', 'shape', 'notes', 'alt_text']),
+  location: z.string().trim().min(1).max(300), text: z.string().max(50000),
+  start: z.number().int().min(0).max(100000), end: z.number().int().min(0).max(100000),
+});
+
+export const registerContentDocumentMap = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .inputValidator(idInput.extend({ expected_version: z.number().int().positive(), blocks: z.array(documentBlockSchema).max(2000) }))
+  .handler(async ({ data, context }) => {
+    await requireRole(context, data.workspace_id, 'creator', 'Only creators can register document text locations');
+    const content = await context.supabase.from('contents').select('id,type,owner_id,status,version,body_text')
+      .eq('id', data.id).eq('workspace_id', data.workspace_id).maybeSingle();
+    if (content.error || !content.data || content.data.owner_id !== context.userId) throw new Error('Content not found in this workspace');
+    // Location maps are metadata for a fixed immutable version; they may also be
+    // attached after submit/recheck so a rewritten Office version keeps its map.
+    if (!['docx', 'pptx'].includes(content.data.type) || !['draft', 'changes_requested', 'submitted', 'checked'].includes(content.data.status)) throw new Error('This Office document cannot register text locations');
+    if (content.data.version !== data.expected_version) throw new Error('This document changed; reload before saving its text locations');
+    let combined = '';
+    for (const [index, block] of data.blocks.entries()) {
+      if (block.end - block.start !== block.text.length || content.data.body_text.slice(block.start, block.end) !== block.text) throw new Error('Document text locations do not match the saved extraction');
+      if (index > 0) combined += '\n\n';
+      if (block.start !== combined.length) throw new Error('Document text locations are not in the extracted reading order');
+      combined += block.text;
+    }
+    if (combined !== content.data.body_text) throw new Error('Document text locations do not cover the saved extraction');
+    const version = await context.supabase.from('content_versions').select('id').eq('content_id', data.id).eq('workspace_id', data.workspace_id)
+      .eq('version_number', data.expected_version).maybeSingle();
+    if (version.error || !version.data) throw new Error('Document version not found');
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    const saved = await supabaseAdmin.rpc('set_content_document_map', {
+      _actor: context.userId, _content_id: data.id, _content_version_id: version.data.id, _blocks: data.blocks as never,
+    });
+    fail(saved.error); return { registered: true };
+  });

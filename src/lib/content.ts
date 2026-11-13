@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Role } from './access';
 
-export const contentTypes = ['text', 'image', 'pdf'] as const;
+export const contentTypes = ['text', 'image', 'pdf', 'docx', 'pptx'] as const;
 export type ContentType = (typeof contentTypes)[number];
 export const contentStatuses = ['draft', 'submitted', 'checked', 'pending_manager', 'pending_reviewer', 'in_review', 'approved', 'rejected', 'changes_requested'] as const;
 export type ContentStatus = (typeof contentStatuses)[number];
@@ -18,6 +18,8 @@ export const canInspectReviews = (role: Role) => role === 'admin';
 /** Creator submission: from a draft, or resubmitting after changes were requested. Full lifecycle lives in ./approval. */
 export function canTransition(from: ContentStatus, to: ContentStatus) { return (from === 'draft' || from === 'changes_requested') && to === 'submitted'; }
 export const isEditable = (status: ContentStatus) => status === 'draft' || status === 'changes_requested';
+export const needsExtractedTextConfirmation = (type: ContentType, hasNewFile: boolean, confirmed: boolean) =>
+  hasNewFile && ['pdf', 'docx', 'pptx'].includes(type) && !confirmed;
 
 const hex = z.string().trim().toUpperCase().regex(/^#[0-9A-F]{6}$/, 'Use a six-digit HEX colour such as #1F2A44').nullable().or(z.literal('').transform(() => null));
 export const contentFieldsSchema = z.object({
@@ -37,6 +39,8 @@ export function fieldsForType(type: ContentType, f: ContentFields): ContentField
 export const contentFileRules = {
   image: { maxBytes: 10 * 1024 * 1024, types: { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' } as Record<string, string>, label: 'PNG, JPG or WebP up to 10 MB' },
   pdf: { maxBytes: 20 * 1024 * 1024, types: { 'application/pdf': 'pdf' } as Record<string, string>, label: 'PDF up to 20 MB' },
+  docx: { maxBytes: 20 * 1024 * 1024, types: { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx' } as Record<string, string>, label: 'Word DOCX up to 20 MB' },
+  pptx: { maxBytes: 20 * 1024 * 1024, types: { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx' } as Record<string, string>, label: 'PowerPoint PPTX up to 20 MB' },
 } as const;
 
 /** Detects the real file type from its first bytes; returns null when the signature is not an allowed type. */
@@ -50,17 +54,21 @@ export function sniffMime(bytes: Uint8Array): string | null {
 }
 
 /** Validates a file against its content type using the real signature, not the name or browser type. */
-export function checkContentFile(type: 'image' | 'pdf', bytes: Uint8Array, size: number, extension: string): string | null {
+export function checkContentFile(type: Exclude<ContentType, 'text'>, bytes: Uint8Array, size: number, extension: string): string | null {
   const rule = contentFileRules[type]; const mime = sniffMime(bytes);
   if (size <= 0) return 'The file is empty.';
   if (size > rule.maxBytes) return `The file is too large. Use ${rule.label}.`;
+  if (type === 'docx' || type === 'pptx') {
+    if (!(bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04)) return `Unsupported file. Use ${rule.label}.`;
+    return extension === type ? null : 'The file contents do not match its type.';
+  }
   if (!mime || !rule.types[mime]) return `Unsupported file. Use ${rule.label}.`;
   if (rule.types[mime] !== extension) return 'The file contents do not match its type.';
   return null;
 }
 
 export function contentPathPattern(workspaceId: string, contentId: string) {
-  return new RegExp(`^${workspaceId}/${contentId}/[0-9a-f-]{36}\\.(png|jpg|webp|pdf)$`);
+  return new RegExp(`^${workspaceId}/${contentId}/[0-9a-f-]{36}\\.(png|jpg|webp|pdf|docx|pptx)$`);
 }
 
 export const statusLabel: Record<ContentStatus, string> = { draft: 'Draft', submitted: 'Checking', checked: 'Checked', pending_manager: 'Awaiting manager', pending_reviewer: 'Awaiting reviewer', in_review: 'In review', approved: 'Approved', rejected: 'Rejected', changes_requested: 'Changes requested' };

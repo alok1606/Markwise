@@ -4,6 +4,7 @@
 // For user-authenticated queries (with RLS), use the auth middleware instead.
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
+import { assertStagingProjectTarget } from './staging-target';
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
@@ -30,8 +31,17 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 function createSupabaseAdminClient() {
+  const stagingMode = process.env['MARKWISE_STAGING_MODE'] === 'true' || import.meta.env['VITE_MARKWISE_STAGING_MODE'] === 'true';
   const SUPABASE_URL = process.env['SUPABASE_URL'];
   const SUPABASE_SERVICE_ROLE_KEY = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+
+  assertStagingProjectTarget({
+    enabled: stagingMode,
+    expectedProjectRef: process.env['MARKWISE_EXPECTED_SUPABASE_PROJECT_REF'],
+    browserExpectedProjectRef: import.meta.env['VITE_MARKWISE_EXPECTED_SUPABASE_PROJECT_REF'],
+    browserUrl: import.meta.env['VITE_SUPABASE_URL'],
+    serverUrl: SUPABASE_URL,
+  });
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [
